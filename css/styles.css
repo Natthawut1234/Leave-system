@@ -1,0 +1,242 @@
+/* ===== Custom Styles for Leave System ===== */
+
+:root {
+  --sidebar-width: 260px;
+  --header-height: 60px;
+}
+
+/* ===== Global ===== */
+body {
+  font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
+  color: white;
+  z-index: 1000;
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 1.2rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  text-align: center;
+}
+
+.sidebar-brand h5 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.sidebar-brand small {
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+
+.sidebar-nav {
+  padding: 1rem 0;
+}
+
+.sidebar-nav .nav-item {
+  margin: 2px 8px;
+}
+
+.sidebar-nav .nav-link {
+  color: rgba(255,255,255,0.7);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+.sidebar-nav .nav-link:hover {
+  color: white;
+  background: rgba(255,255,255,0.1);
+}
+
+.sidebar-nav .nav-link.active {
+  color: white;
+  background: rgba(255,255,255,0.2);
+  font-weight: 600;
+}
+
+.sidebar-nav .nav-link i {
+  font-size: 1.2rem;
+  width: 24px;
+  text-align: center;
+}
+
+/* ===== Main Content ===== */
+.main-content {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+.top-bar {
+  background: white;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* ===== Home Page Cards ===== */
+.role-card {
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.role-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+
+.role-card .card-body {
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.role-card .icon-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 2.5rem;
+}
+
+.role-card.leader-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.role-card.leader-card .icon-wrap {
+  background: rgba(255,255,255,0.2);
+}
+
+.role-card.manager-card {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.role-card.manager-card .icon-wrap {
+  background: rgba(255,255,255,0.2);
+}
+
+/* ===== Toast / Alert ===== */
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+}
+
+/* ===== Cards ===== */
+.card {
+  border-radius: 12px;
+}
+
+.card-header {
+  border-radius: 12px 12px 0 0 !important;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 991.98px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+  }
+  
+  .sidebar-overlay.show {
+    display: block;
+  }
+}
+
+/* ===== Language Switch ===== */
+.lang-switch {
+  display: flex;
+  gap: 4px;
+}
+
+.lang-switch .btn {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 20px;
+}
+
+/* ===== Badge ===== */
+.badge-sm {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.4rem;
+}
+
+/* ===== Table ===== */
+.table th, .table td {
+  vertical-align: middle;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+/* ===== Print ===== */
+@media print {
+  .sidebar, .top-bar, .btn {
+    display: none !important;
+  }
+  .main-content {
+    margin-left: 0 !important;
+  }
+}
