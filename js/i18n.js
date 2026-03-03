@@ -21,6 +21,13 @@ const I18n = (() => {
       roleManager: 'หัวหน้า Production',
       roleManagerDesc: 'ดู Dashboard ภาพรวมทุกไลน์',
 
+      // Shifts
+      selectShift: 'เลือกกะ',
+      shiftDay: 'กะเช้า',
+      shiftNight: 'กะดึก',
+      shiftAll: 'ทุกกะ',
+      shift: 'กะ',
+
       // Leader Page
       leaderTitle: 'บันทึกการลาประจำวัน',
       selectLine: 'เลือกไลน์ผลิต',
@@ -89,6 +96,13 @@ const I18n = (() => {
       importSuccess: 'นำเข้าข้อมูลสำเร็จ!',
       importError: 'ไฟล์ไม่ถูกต้อง',
 
+      // Search & Filter
+      searchEmployee: 'ค้นหาพนักงาน...',
+      searchPlaceholder: 'พิมพ์ชื่อเพื่อค้นหา...',
+      filterEmployee: 'กรองพนักงาน...',
+      noMatchFound: 'ไม่พบรายชื่อที่ค้นหา',
+      showAll: 'แสดงทั้งหมด',
+
       // Common
       save: 'บันทึก',
       cancel: 'ยกเลิก',
@@ -120,6 +134,13 @@ const I18n = (() => {
       roleLeaderDesc: 'Record daily leave for team members',
       roleManager: 'Production Manager',
       roleManagerDesc: 'View Dashboard overview of all lines',
+
+      // Shifts
+      selectShift: 'Select Shift',
+      shiftDay: 'Day Shift',
+      shiftNight: 'Night Shift',
+      shiftAll: 'All Shifts',
+      shift: 'Shift',
 
       // Leader Page
       leaderTitle: 'Daily Leave Recording',
@@ -189,6 +210,13 @@ const I18n = (() => {
       exportSuccess: 'Data exported successfully!',
       importSuccess: 'Data imported successfully!',
       importError: 'Invalid file',
+
+      // Search & Filter
+      searchEmployee: 'Search employee...',
+      searchPlaceholder: 'Type name to search...',
+      filterEmployee: 'Filter employee...',
+      noMatchFound: 'No match found',
+      showAll: 'Show all',
 
       // Common
       save: 'Save',

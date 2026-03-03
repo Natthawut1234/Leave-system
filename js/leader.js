@@ -1,26 +1,30 @@
 /**
  * Leader Module
  * Handles leave recording for production line leaders
+ * Supports Day / Night shift with separate employees per shift
  */
 const LeaderModule = (() => {
   let currentLineId = null;
+  let currentShift = 'day';
   let currentDate = new Date().toISOString().split('T')[0];
+  let availableEmployees = [];
 
   function render() {
     const settings = DataManager.getSettings();
     currentLineId = settings.currentLineId;
+    currentShift = settings.currentShift || 'day';
     const t = I18n.t;
 
     const container = document.getElementById('main-content');
     container.innerHTML = `
-      <div class="container-fluid py-3">
-        <!-- Line Selection & Setup -->
+      <div class="container-fluid py-3 animate-fade-in">
+        <!-- Line & Shift Selection -->
         <div class="row mb-3">
           <div class="col-12">
             <div class="card shadow-sm border-0">
               <div class="card-body">
                 <div class="row align-items-end g-3">
-                  <div class="col-md-3">
+                  <div class="col-md-2">
                     <label class="form-label fw-bold">
                       <i class="bi bi-diagram-3"></i> ${t('selectLine')}
                     </label>
@@ -31,10 +35,23 @@ const LeaderModule = (() => {
                   </div>
                   <div class="col-md-3">
                     <label class="form-label fw-bold">
+                      <i class="bi bi-clock"></i> ${t('selectShift')}
+                    </label>
+                    <div class="btn-group w-100" role="group" id="shift-selector">
+                      <button type="button" class="btn btn-lg ${currentShift === 'day' ? 'btn-warning' : 'btn-outline-warning'}" data-shift="day">
+                        <i class="bi bi-sun"></i> ${t('shiftDay')}
+                      </button>
+                      <button type="button" class="btn btn-lg ${currentShift === 'night' ? 'btn-dark' : 'btn-outline-dark'}" data-shift="night">
+                        <i class="bi bi-moon-stars"></i> ${t('shiftNight')}
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label fw-bold">
                       <i class="bi bi-person-badge"></i> ${t('leaderName')}
                     </label>
                     <input type="text" id="leader-name" class="form-control" 
-                           value="${settings.leaderName || ''}" placeholder="${t('leaderName')}">
+                           value="" placeholder="${t('leaderName')}">
                   </div>
                   <div class="col-md-3">
                     <label class="form-label fw-bold">
@@ -43,7 +60,7 @@ const LeaderModule = (() => {
                     <input type="date" id="leave-date" class="form-control form-control-lg" 
                            value="${currentDate}">
                   </div>
-                  <div class="col-md-3">
+                  <div class="col-md-2">
                     <button id="btn-save-setup" class="btn btn-primary btn-lg w-100">
                       <i class="bi bi-check-lg"></i> ${t('saveSetup')}
                     </button>
@@ -55,6 +72,11 @@ const LeaderModule = (() => {
         </div>
 
         <div id="leader-content" style="display: ${currentLineId ? 'block' : 'none'};">
+          <!-- Shift Badge indicator -->
+          <div class="mb-3" id="shift-badge-bar">
+            ${renderShiftBadge()}
+          </div>
+
           <!-- Stats Cards -->
           <div class="row mb-3" id="stats-cards"></div>
 
@@ -69,9 +91,16 @@ const LeaderModule = (() => {
                 <div class="card-body">
                   <div class="mb-3">
                     <label class="form-label">${t('employeeName')}</label>
-                    <select id="employee-select" class="form-select">
-                      <option value="">-- ${t('employeeName')} --</option>
-                    </select>
+                    <div class="position-relative" id="employee-search-wrapper">
+                      <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="employee-search-input" class="form-control" 
+                               placeholder="${t('searchEmployee')}" autocomplete="off">
+                      </div>
+                      <input type="hidden" id="employee-select-value">
+                      <div id="employee-dropdown" class="employee-search-dropdown" style="display:none;">
+                      </div>
+                    </div>
                   </div>
                   <div class="mb-3">
                     <label class="form-label">${t('leaveType')}</label>
@@ -118,8 +147,14 @@ const LeaderModule = (() => {
                       <i class="bi bi-person-plus"></i> ${t('addManually')}
                     </button>
                   </div>
+                  <!-- Search/filter employee list -->
+                  <div class="input-group mb-2">
+                    <span class="input-group-text"><i class="bi bi-funnel"></i></span>
+                    <input type="text" id="employee-list-filter" class="form-control form-control-sm" 
+                           placeholder="${t('filterEmployee')}">
+                  </div>
                   <!-- Employee list -->
-                  <div id="employee-list" class="list-group" style="max-height: 300px; overflow-y: auto;">
+                  <div id="employee-list" class="list-group" style="max-height: 400px; overflow-y: auto;">
                   </div>
                 </div>
               </div>
@@ -133,6 +168,14 @@ const LeaderModule = (() => {
                   <span class="badge bg-dark" id="leave-count">0</span>
                 </div>
                 <div class="card-body p-0">
+                  <!-- Search today's leaves -->
+                  <div class="p-3 pb-0 mb-3">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text"><i class="bi bi-search"></i></span>
+                      <input type="text" id="leave-table-search" class="form-control" 
+                             placeholder="${t('searchEmployee')}">
+                    </div>
+                  </div>
                   <div class="table-responsive">
                     <table class="table table-hover table-striped mb-0">
                       <thead class="table-dark">
@@ -174,6 +217,12 @@ const LeaderModule = (() => {
                       </button>
                     </div>
                   </div>
+                  <!-- Search history -->
+                  <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="history-search" class="form-control" 
+                           placeholder="${t('searchEmployee')}">
+                  </div>
                   <div id="history-table-container"></div>
                 </div>
               </div>
@@ -194,8 +243,25 @@ const LeaderModule = (() => {
     bindEvents();
     if (currentLineId) {
       document.getElementById('line-select').value = currentLineId;
+      loadLeaderName();
       refreshData();
     }
+  }
+
+  function renderShiftBadge() {
+    const t = I18n.t;
+    if (currentShift === 'day') {
+      return `<span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="bi bi-sun me-1"></i> ${t('shiftDay')}</span>`;
+    } else {
+      return `<span class="badge bg-dark fs-6 px-3 py-2"><i class="bi bi-moon-stars me-1"></i> ${t('shiftNight')}</span>`;
+    }
+  }
+
+  function loadLeaderName() {
+    if (!currentLineId) return;
+    const line = DataManager.getLine(currentLineId);
+    const leader = line?.shifts?.[currentShift]?.leader || '';
+    document.getElementById('leader-name').value = leader;
   }
 
   function generateLineOptions() {
@@ -223,11 +289,33 @@ const LeaderModule = (() => {
         document.getElementById('leader-content').style.display = 'block';
         document.getElementById('no-line-msg').style.display = 'none';
         DataManager.saveSettings({ currentLineId });
+        loadLeaderName();
         refreshData();
       } else {
         document.getElementById('leader-content').style.display = 'none';
         document.getElementById('no-line-msg').style.display = 'block';
       }
+    });
+
+    // Shift selector
+    document.querySelectorAll('#shift-selector button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentShift = btn.getAttribute('data-shift');
+        DataManager.saveSettings({ currentShift });
+        // Update button styles
+        document.querySelectorAll('#shift-selector button').forEach((b) => {
+          const s = b.getAttribute('data-shift');
+          if (s === 'day') {
+            b.className = `btn btn-lg ${currentShift === 'day' ? 'btn-warning' : 'btn-outline-warning'}`;
+          } else {
+            b.className = `btn btn-lg ${currentShift === 'night' ? 'btn-dark' : 'btn-outline-dark'}`;
+          }
+        });
+        // Update shift badge
+        document.getElementById('shift-badge-bar').innerHTML = renderShiftBadge();
+        loadLeaderName();
+        refreshData();
+      });
     });
 
     // Date change
@@ -242,8 +330,13 @@ const LeaderModule = (() => {
       const leaderName = document.getElementById('leader-name').value.trim();
       const lineId = document.getElementById('line-select').value;
       if (lineId) {
-        DataManager.saveLine(lineId, { leader: leaderName });
-        DataManager.saveSettings({ leaderName, currentLineId: lineId });
+        // Save leader name for current shift
+        const line = DataManager.getLine(lineId);
+        if (line && line.shifts && line.shifts[currentShift]) {
+          line.shifts[currentShift].leader = leaderName;
+          DataManager.saveLine(lineId, line);
+        }
+        DataManager.saveSettings({ currentLineId: lineId, currentShift });
         showToast(I18n.t('success'), 'success');
       }
     });
@@ -277,6 +370,81 @@ const LeaderModule = (() => {
     document
       .getElementById('btn-search-history')
       .addEventListener('click', searchHistory);
+
+    // Today's leave table search
+    document.getElementById('leave-table-search').addEventListener('input', (e) => {
+      const keyword = e.target.value.trim().toLowerCase();
+      const rows = document.querySelectorAll('#leave-table-body tr');
+      let visibleCount = 0;
+      rows.forEach((row) => {
+        const text = row.textContent.toLowerCase();
+        const match = text.includes(keyword);
+        row.style.display = match ? '' : 'none';
+        if (match) visibleCount++;
+      });
+      document.getElementById('leave-count').textContent = keyword ? visibleCount : rows.length;
+      const noMsg = document.getElementById('no-leave-msg');
+      if (noMsg) {
+        noMsg.style.display = (rows.length > 0 && visibleCount === 0) ? 'block' : (rows.length === 0 ? 'block' : 'none');
+      }
+    });
+
+    // History table search
+    document.getElementById('history-search').addEventListener('input', (e) => {
+      const keyword = e.target.value.trim().toLowerCase();
+      const rows = document.querySelectorAll('#history-table-container tbody tr');
+      rows.forEach((row) => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(keyword) ? '' : 'none';
+      });
+    });
+
+    // Employee search dropdown
+    const empSearchInput = document.getElementById('employee-search-input');
+    const empDropdown = document.getElementById('employee-dropdown');
+    const empHiddenInput = document.getElementById('employee-select-value');
+
+    empSearchInput.addEventListener('focus', () => {
+      renderEmployeeDropdown(empSearchInput.value);
+      empDropdown.style.display = 'block';
+    });
+
+    empSearchInput.addEventListener('input', () => {
+      empHiddenInput.value = '';
+      renderEmployeeDropdown(empSearchInput.value);
+      empDropdown.style.display = 'block';
+    });
+
+    empDropdown.addEventListener('click', (e) => {
+      const item = e.target.closest('.dropdown-item[data-value]');
+      if (item) {
+        const name = item.getAttribute('data-value').replace(/\\'/g, "'");
+        empSearchInput.value = name;
+        empHiddenInput.value = name;
+        empDropdown.style.display = 'none';
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#employee-search-wrapper')) {
+        empDropdown.style.display = 'none';
+      }
+    });
+
+    // Employee list filter
+    document.getElementById('employee-list-filter').addEventListener('input', (e) => {
+      const keyword = e.target.value.trim().toLowerCase();
+      const items = document.querySelectorAll('#employee-list .list-group-item');
+      items.forEach((item) => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(keyword)) {
+          item.classList.remove('d-none');
+        } else {
+          item.classList.add('d-none');
+        }
+      });
+    });
   }
 
   function refreshData() {
@@ -288,10 +456,11 @@ const LeaderModule = (() => {
 
   function refreshStats() {
     if (!currentLineId) return;
-    const employees = DataManager.getEmployees(currentLineId);
+    const employees = DataManager.getEmployees(currentLineId, currentShift);
     const leaves = DataManager.getLeaveRecordsByDateAndLine(
       currentDate,
-      currentLineId
+      currentLineId,
+      currentShift
     );
     const total = employees.length;
     const onLeave = leaves.length;
@@ -300,29 +469,29 @@ const LeaderModule = (() => {
 
     document.getElementById('stats-cards').innerHTML = `
       <div class="col-md-4">
-        <div class="card border-0 shadow-sm bg-primary text-white">
+        <div class="card stat-card border-0 shadow-sm bg-primary text-white">
           <div class="card-body text-center">
             <i class="bi bi-people" style="font-size: 2rem;"></i>
             <h2 class="mb-0">${total}</h2>
-            <small>${t('totalEmployees')}</small>
+            <small class="opacity-75">${t('totalEmployees')}</small>
           </div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="card border-0 shadow-sm bg-danger text-white">
+        <div class="card stat-card border-0 shadow-sm bg-danger text-white">
           <div class="card-body text-center">
             <i class="bi bi-person-dash" style="font-size: 2rem;"></i>
             <h2 class="mb-0">${onLeave}</h2>
-            <small>${t('onLeaveToday')}</small>
+            <small class="opacity-75">${t('onLeaveToday')}</small>
           </div>
         </div>
       </div>
       <div class="col-md-4">
-        <div class="card border-0 shadow-sm ${attendance >= 90 ? 'bg-success' : attendance >= 75 ? 'bg-warning' : 'bg-danger'} text-white">
+        <div class="card stat-card border-0 shadow-sm ${attendance >= 90 ? 'bg-success' : attendance >= 75 ? 'bg-warning' : 'bg-danger'} text-white">
           <div class="card-body text-center">
             <i class="bi bi-graph-up" style="font-size: 2rem;"></i>
             <h2 class="mb-0">${attendance}%</h2>
-            <small>${t('attendanceRate')}</small>
+            <small class="opacity-75">${t('attendanceRate')}</small>
           </div>
         </div>
       </div>
@@ -331,11 +500,14 @@ const LeaderModule = (() => {
 
   function refreshEmployeeList() {
     if (!currentLineId) return;
-    const employees = DataManager.getEmployees(currentLineId);
+    const employees = DataManager.getEmployees(currentLineId, currentShift);
     const container = document.getElementById('employee-list');
     const t = I18n.t;
 
     document.getElementById('emp-count').textContent = employees.length;
+    // Reset filter input
+    const filterInput = document.getElementById('employee-list-filter');
+    if (filterInput) filterInput.value = '';
 
     if (employees.length === 0) {
       container.innerHTML = `<div class="text-center text-muted py-3"><small>${t('noEmployees')}</small></div>`;
@@ -358,33 +530,71 @@ const LeaderModule = (() => {
 
   function refreshEmployeeSelect() {
     if (!currentLineId) return;
-    const employees = DataManager.getEmployees(currentLineId);
+    const employees = DataManager.getEmployees(currentLineId, currentShift);
     const leaves = DataManager.getLeaveRecordsByDateAndLine(
       currentDate,
-      currentLineId
+      currentLineId,
+      currentShift
     );
     const onLeaveNames = leaves.map((l) => l.employeeName);
+    availableEmployees = employees.filter((emp) => !onLeaveNames.includes(emp));
+    // Clear the search input
+    const searchInput = document.getElementById('employee-search-input');
+    const hiddenInput = document.getElementById('employee-select-value');
+    if (searchInput) searchInput.value = '';
+    if (hiddenInput) hiddenInput.value = '';
+    renderEmployeeDropdown('');
+  }
 
-    const select = document.getElementById('employee-select');
-    select.innerHTML = `<option value="">-- ${I18n.t('employeeName')} --</option>`;
-    employees
-      .filter((emp) => !onLeaveNames.includes(emp))
-      .forEach((emp) => {
-        select.innerHTML += `<option value="${escapeHtml(emp)}">${emp}</option>`;
-      });
+  function renderEmployeeDropdown(filter) {
+    const dropdown = document.getElementById('employee-dropdown');
+    if (!dropdown) return;
+    const t = I18n.t;
+    const keyword = filter.trim().toLowerCase();
+    const filtered = keyword
+      ? availableEmployees.filter((emp) => emp.toLowerCase().includes(keyword))
+      : availableEmployees;
+
+    if (filtered.length === 0) {
+      dropdown.innerHTML = `<div class="dropdown-item text-muted disabled"><i class="bi bi-emoji-frown"></i> ${t('noMatchFound')}</div>`;
+    } else {
+      dropdown.innerHTML = filtered
+        .map(
+          (emp) =>
+            `<div class="dropdown-item" data-value="${escapeHtml(emp)}">${highlightMatch(emp, keyword)}</div>`
+        )
+        .join('');
+    }
+  }
+
+  function highlightMatch(text, keyword) {
+    if (!keyword) return text;
+    const idx = text.toLowerCase().indexOf(keyword);
+    if (idx === -1) return text;
+    return (
+      text.substring(0, idx) +
+      '<strong class="text-primary">' +
+      text.substring(idx, idx + keyword.length) +
+      '</strong>' +
+      text.substring(idx + keyword.length)
+    );
   }
 
   function refreshLeaveTable() {
     if (!currentLineId) return;
     const leaves = DataManager.getLeaveRecordsByDateAndLine(
       currentDate,
-      currentLineId
+      currentLineId,
+      currentShift
     );
     const tbody = document.getElementById('leave-table-body');
     const noMsg = document.getElementById('no-leave-msg');
     const t = I18n.t;
 
     document.getElementById('leave-count').textContent = leaves.length;
+    // Reset search input
+    const leaveSearch = document.getElementById('leave-table-search');
+    if (leaveSearch) leaveSearch.value = '';
 
     if (leaves.length === 0) {
       tbody.innerHTML = '';
@@ -414,17 +624,17 @@ const LeaderModule = (() => {
 
   function getLeaveTypeBadge(type) {
     const map = {
-      ลาป่วย: 'bg-danger',
-      ลากิจ: 'bg-warning text-dark',
-      ลาพักร้อน: 'bg-info',
-      ลาคลอด: 'bg-primary',
-      อื่นๆ: 'bg-secondary',
+      'ลาป่วย': 'bg-danger',
+      'ลากิจ': 'bg-warning text-dark',
+      'ลาพักร้อน': 'bg-info',
+      'ลาคลอด': 'bg-primary',
+      'อื่นๆ': 'bg-secondary',
     };
     return map[type] || 'bg-secondary';
   }
 
   function recordLeave() {
-    const employeeName = document.getElementById('employee-select').value;
+    const employeeName = document.getElementById('employee-select-value').value;
     const leaveType = document.getElementById('leave-type').value;
     const note = document.getElementById('leave-note').value.trim();
 
@@ -436,6 +646,7 @@ const LeaderModule = (() => {
     DataManager.addLeaveRecord({
       date: currentDate,
       lineId: currentLineId,
+      shift: currentShift,
       employeeName,
       leaveType,
       note,
@@ -453,7 +664,7 @@ const LeaderModule = (() => {
     const name = input.value.trim();
     if (!name || !currentLineId) return;
 
-    DataManager.addEmployee(currentLineId, name);
+    DataManager.addEmployee(currentLineId, currentShift, name);
     input.value = '';
     refreshEmployeeList();
     refreshEmployeeSelect();
@@ -462,7 +673,7 @@ const LeaderModule = (() => {
 
   function removeEmp(name) {
     if (confirm(I18n.t('confirmDelete'))) {
-      DataManager.removeEmployee(currentLineId, name);
+      DataManager.removeEmployee(currentLineId, currentShift, name);
       refreshEmployeeList();
       refreshEmployeeSelect();
       refreshStats();
@@ -507,9 +718,9 @@ const LeaderModule = (() => {
         }
 
         if (names.length > 0) {
-          const existing = DataManager.getEmployees(currentLineId);
+          const existing = DataManager.getEmployees(currentLineId, currentShift);
           const merged = [...new Set([...existing, ...names])];
-          DataManager.setEmployees(currentLineId, merged);
+          DataManager.setEmployees(currentLineId, currentShift, merged);
           refreshEmployeeList();
           refreshEmployeeSelect();
           refreshStats();
@@ -547,7 +758,7 @@ const LeaderModule = (() => {
     if (!from || !to || !currentLineId) return;
 
     const records = DataManager.getLeaveRecordsByDateRange(from, to).filter(
-      (r) => String(r.lineId) === String(currentLineId)
+      (r) => String(r.lineId) === String(currentLineId) && r.shift === currentShift
     );
 
     const container = document.getElementById('history-table-container');

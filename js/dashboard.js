@@ -1,26 +1,28 @@
 /**
  * Dashboard Module
  * Shows summary overview for production managers
+ * Supports Day / Night / All shift filtering
  */
 const DashboardModule = (() => {
   let barChart = null;
   let pieChart = null;
   let currentDate = new Date().toISOString().split('T')[0];
+  let currentShift = null; // null = all shifts
 
   function render() {
     const t = I18n.t;
     const container = document.getElementById('main-content');
     container.innerHTML = `
-      <div class="container-fluid py-3">
-        <!-- Date Selector -->
+      <div class="container-fluid py-3 animate-fade-in">
+        <!-- Date & Shift Selector -->
         <div class="row mb-3">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-calendar-date"></i></span>
               <input type="date" id="dashboard-date" class="form-control form-control-lg" value="${currentDate}">
             </div>
           </div>
-          <div class="col-md-3 d-flex align-items-center">
+          <div class="col-md-2 d-flex align-items-center">
             <button class="btn btn-outline-secondary me-2" id="btn-prev-day">
               <i class="bi bi-chevron-left"></i>
             </button>
@@ -31,7 +33,20 @@ const DashboardModule = (() => {
               <i class="bi bi-chevron-right"></i>
             </button>
           </div>
-          <div class="col-md-5 text-end">
+          <div class="col-md-4">
+            <div class="btn-group w-100" role="group" id="dashboard-shift-selector">
+              <button type="button" class="btn ${currentShift === null ? 'btn-primary' : 'btn-outline-primary'}" data-shift="all">
+                <i class="bi bi-layers"></i> ${t('shiftAll')}
+              </button>
+              <button type="button" class="btn ${currentShift === 'day' ? 'btn-warning' : 'btn-outline-warning'}" data-shift="day">
+                <i class="bi bi-sun"></i> ${t('shiftDay')}
+              </button>
+              <button type="button" class="btn ${currentShift === 'night' ? 'btn-dark' : 'btn-outline-dark'}" data-shift="night">
+                <i class="bi bi-moon-stars"></i> ${t('shiftNight')}
+              </button>
+            </div>
+          </div>
+          <div class="col-md-3 text-end">
             <button class="btn btn-success" id="btn-export-excel">
               <i class="bi bi-file-earmark-excel"></i> ${t('exportExcel')}
             </button>
@@ -72,12 +87,21 @@ const DashboardModule = (() => {
             <span class="badge bg-dark" id="detail-count">0</span>
           </div>
           <div class="card-body p-0">
+            <!-- Search/filter bar -->
+            <div class="p-3 pb-0 mb-3">
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="detail-search-input" class="form-control" 
+                       placeholder="${t('searchEmployee')}">
+              </div>
+            </div>
             <div class="table-responsive">
               <table class="table table-hover table-striped mb-0">
                 <thead class="table-dark">
                   <tr>
                     <th>#</th>
                     <th>${t('line')}</th>
+                    <th>${t('shift')}</th>
                     <th>${t('employeeName')}</th>
                     <th>${t('leaveType')}</th>
                     <th>${t('note')}</th>
@@ -133,6 +157,22 @@ const DashboardModule = (() => {
     return d.toISOString().split('T')[0];
   }
 
+  function getShiftLabel(shift) {
+    const t = I18n.t;
+    if (shift === 'day') return t('shiftDay');
+    if (shift === 'night') return t('shiftNight');
+    return shift || '-';
+  }
+
+  function getShiftBadge(shift) {
+    if (shift === 'day') {
+      return `<span class="badge bg-warning text-dark"><i class="bi bi-sun"></i> ${getShiftLabel(shift)}</span>`;
+    } else if (shift === 'night') {
+      return `<span class="badge bg-dark"><i class="bi bi-moon-stars"></i> ${getShiftLabel(shift)}</span>`;
+    }
+    return `<span class="badge bg-secondary">${shift || '-'}</span>`;
+  }
+
   function bindEvents() {
     document
       .getElementById('dashboard-date')
@@ -163,6 +203,26 @@ const DashboardModule = (() => {
       refreshDashboard();
     });
 
+    // Shift filter buttons
+    document.querySelectorAll('#dashboard-shift-selector button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const shift = btn.getAttribute('data-shift');
+        currentShift = shift === 'all' ? null : shift;
+        // Update button styles
+        document.querySelectorAll('#dashboard-shift-selector button').forEach((b) => {
+          const s = b.getAttribute('data-shift');
+          if (s === 'all') {
+            b.className = `btn ${currentShift === null ? 'btn-primary' : 'btn-outline-primary'}`;
+          } else if (s === 'day') {
+            b.className = `btn ${currentShift === 'day' ? 'btn-warning' : 'btn-outline-warning'}`;
+          } else {
+            b.className = `btn ${currentShift === 'night' ? 'btn-dark' : 'btn-outline-dark'}`;
+          }
+        });
+        refreshDashboard();
+      });
+    });
+
     document
       .getElementById('btn-export-excel')
       .addEventListener('click', () => exportDailyExcel(currentDate));
@@ -174,10 +234,26 @@ const DashboardModule = (() => {
     document
       .getElementById('btn-hist-export')
       .addEventListener('click', exportHistoryExcel);
+
+    // Detail table real-time search
+    document.getElementById('detail-search-input').addEventListener('input', (e) => {
+      const keyword = e.target.value.trim().toLowerCase();
+      const rows = document.querySelectorAll('#detail-table-body tr');
+      let visibleCount = 0;
+      rows.forEach((row) => {
+        const text = row.textContent.toLowerCase();
+        const match = text.includes(keyword);
+        row.style.display = match ? '' : 'none';
+        if (match) visibleCount++;
+      });
+      document.getElementById('detail-count').textContent = keyword ? visibleCount : rows.length;
+      const noMsg = document.getElementById('no-data-msg');
+      if (noMsg) noMsg.style.display = (rows.length > 0 && visibleCount === 0) ? 'block' : (rows.length === 0 ? 'block' : 'none');
+    });
   }
 
   function refreshDashboard() {
-    const summary = DataManager.getDailySummary(currentDate);
+    const summary = DataManager.getDailySummary(currentDate, currentShift);
     const lines = DataManager.getLines();
     const totalLines = Object.keys(lines).length;
     const linesWithLeave = Object.keys(summary.lineBreakdown).length;
@@ -186,38 +262,38 @@ const DashboardModule = (() => {
     // Summary Cards
     document.getElementById('summary-cards').innerHTML = `
       <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-danger text-white">
+        <div class="card stat-card border-0 shadow-sm bg-danger text-white">
           <div class="card-body text-center py-3">
             <i class="bi bi-person-dash" style="font-size: 2.5rem;"></i>
             <h1 class="mb-0 mt-1">${summary.totalLeaves}</h1>
-            <small>${t('totalLeavesToday')}</small>
+            <small class="opacity-75">${t('totalLeavesToday')}</small>
           </div>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-warning text-dark">
+        <div class="card stat-card border-0 shadow-sm bg-warning text-dark">
           <div class="card-body text-center py-3">
             <i class="bi bi-exclamation-triangle" style="font-size: 2.5rem;"></i>
             <h1 class="mb-0 mt-1">${linesWithLeave}</h1>
-            <small>${t('linesWithLeave')}</small>
+            <small class="opacity-75">${t('linesWithLeave')}</small>
           </div>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-success text-white">
+        <div class="card stat-card border-0 shadow-sm bg-success text-white">
           <div class="card-body text-center py-3">
             <i class="bi bi-check-circle" style="font-size: 2.5rem;"></i>
             <h1 class="mb-0 mt-1">${totalLines - linesWithLeave}</h1>
-            <small>${t('linesNoLeave')}</small>
+            <small class="opacity-75">${t('linesNoLeave')}</small>
           </div>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-info text-white">
+        <div class="card stat-card border-0 shadow-sm bg-info text-white">
           <div class="card-body text-center py-3">
             <i class="bi bi-calculator" style="font-size: 2.5rem;"></i>
             <h1 class="mb-0 mt-1">${linesWithLeave > 0 ? (summary.totalLeaves / linesWithLeave).toFixed(1) : 0}</h1>
-            <small>${t('averagePerLine')}</small>
+            <small class="opacity-75">${t('averagePerLine')}</small>
           </div>
         </div>
       </div>
@@ -305,11 +381,11 @@ const DashboardModule = (() => {
     }
 
     const colorMap = {
-      ลาป่วย: '#dc3545',
-      ลากิจ: '#ffc107',
-      ลาพักร้อน: '#0dcaf0',
-      ลาคลอด: '#0d6efd',
-      อื่นๆ: '#6c757d',
+      'ลาป่วย': '#dc3545',
+      'ลากิจ': '#ffc107',
+      'ลาพักร้อน': '#0dcaf0',
+      'ลาคลอด': '#0d6efd',
+      'อื่นๆ': '#6c757d',
     };
 
     pieChart = new Chart(ctx, {
@@ -341,10 +417,13 @@ const DashboardModule = (() => {
   function renderDetailTable(summary) {
     const tbody = document.getElementById('detail-table-body');
     const noMsg = document.getElementById('no-data-msg');
-    const records = DataManager.getLeaveRecordsByDate(currentDate);
+    const records = DataManager.getLeaveRecordsByDate(currentDate, currentShift);
     const lines = DataManager.getLines();
 
     document.getElementById('detail-count').textContent = records.length;
+    // Reset search input
+    const searchInput = document.getElementById('detail-search-input');
+    if (searchInput) searchInput.value = '';
 
     if (records.length === 0) {
       tbody.innerHTML = '';
@@ -354,8 +433,8 @@ const DashboardModule = (() => {
 
     noMsg.style.display = 'none';
 
-    // Sort by line number
-    records.sort((a, b) => Number(a.lineId) - Number(b.lineId));
+    // Sort by line number then shift
+    records.sort((a, b) => Number(a.lineId) - Number(b.lineId) || (a.shift || '').localeCompare(b.shift || ''));
 
     tbody.innerHTML = records
       .map(
@@ -363,6 +442,7 @@ const DashboardModule = (() => {
       <tr>
         <td>${i + 1}</td>
         <td><span class="badge bg-primary">${lines[r.lineId]?.name || 'Line ' + r.lineId}</span></td>
+        <td>${getShiftBadge(r.shift)}</td>
         <td>${r.employeeName}</td>
         <td><span class="badge ${getLeaveTypeBadge(r.leaveType)}">${r.leaveType}</span></td>
         <td>${r.note || '-'}</td>
@@ -374,11 +454,11 @@ const DashboardModule = (() => {
 
   function getLeaveTypeBadge(type) {
     const map = {
-      ลาป่วย: 'bg-danger',
-      ลากิจ: 'bg-warning text-dark',
-      ลาพักร้อน: 'bg-info',
-      ลาคลอด: 'bg-primary',
-      อื่นๆ: 'bg-secondary',
+      'ลาป่วย': 'bg-danger',
+      'ลากิจ': 'bg-warning text-dark',
+      'ลาพักร้อน': 'bg-info',
+      'ลาคลอด': 'bg-primary',
+      'อื่นๆ': 'bg-secondary',
     };
     return map[type] || 'bg-secondary';
   }
@@ -388,7 +468,11 @@ const DashboardModule = (() => {
     const to = document.getElementById('hist-to').value;
     if (!from || !to) return;
 
-    const records = DataManager.getLeaveRecordsByDateRange(from, to);
+    let records = DataManager.getLeaveRecordsByDateRange(from, to);
+    // Apply shift filter
+    if (currentShift) {
+      records = records.filter((r) => r.shift === currentShift);
+    }
     const lines = DataManager.getLines();
     const t = I18n.t;
     const container = document.getElementById('history-result');
@@ -428,7 +512,7 @@ const DashboardModule = (() => {
         const details = dayRecords
           .map(
             (r) =>
-              `<span class="badge bg-primary me-1">${lines[r.lineId]?.name || 'L' + r.lineId}</span>${r.employeeName} <span class="badge ${getLeaveTypeBadge(r.leaveType)} badge-sm">${r.leaveType}</span>`
+              `<span class="badge bg-primary me-1">${lines[r.lineId]?.name || 'L' + r.lineId}</span>${getShiftBadge(r.shift)} ${r.employeeName} <span class="badge ${getLeaveTypeBadge(r.leaveType)} badge-sm">${r.leaveType}</span>`
           )
           .join(', ');
 
@@ -446,7 +530,7 @@ const DashboardModule = (() => {
   }
 
   function exportDailyExcel(date) {
-    const records = DataManager.getLeaveRecordsByDate(date);
+    let records = DataManager.getLeaveRecordsByDate(date, currentShift);
     const lines = DataManager.getLines();
     const t = I18n.t;
 
@@ -456,7 +540,7 @@ const DashboardModule = (() => {
     }
 
     const data = [
-      [t('line'), t('employeeName'), t('leaveType'), t('note'), t('date')],
+      [t('line'), t('shift'), t('employeeName'), t('leaveType'), t('note'), t('date')],
     ];
 
     records
@@ -464,6 +548,7 @@ const DashboardModule = (() => {
       .forEach((r) => {
         data.push([
           lines[r.lineId]?.name || `Line ${r.lineId}`,
+          getShiftLabel(r.shift),
           r.employeeName,
           r.leaveType,
           r.note || '',
@@ -479,6 +564,7 @@ const DashboardModule = (() => {
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws['!cols'] = [
       { wch: 15 },
+      { wch: 12 },
       { wch: 25 },
       { wch: 15 },
       { wch: 25 },
@@ -494,7 +580,10 @@ const DashboardModule = (() => {
     const to = document.getElementById('hist-to').value;
     if (!from || !to) return;
 
-    const records = DataManager.getLeaveRecordsByDateRange(from, to);
+    let records = DataManager.getLeaveRecordsByDateRange(from, to);
+    if (currentShift) {
+      records = records.filter((r) => r.shift === currentShift);
+    }
     const lines = DataManager.getLines();
     const t = I18n.t;
 
@@ -504,7 +593,7 @@ const DashboardModule = (() => {
     }
 
     const data = [
-      [t('date'), t('line'), t('employeeName'), t('leaveType'), t('note')],
+      [t('date'), t('line'), t('shift'), t('employeeName'), t('leaveType'), t('note')],
     ];
 
     records
@@ -513,6 +602,7 @@ const DashboardModule = (() => {
         data.push([
           r.date,
           lines[r.lineId]?.name || `Line ${r.lineId}`,
+          getShiftLabel(r.shift),
           r.employeeName,
           r.leaveType,
           r.note || '',
@@ -524,6 +614,7 @@ const DashboardModule = (() => {
     ws['!cols'] = [
       { wch: 12 },
       { wch: 15 },
+      { wch: 12 },
       { wch: 25 },
       { wch: 15 },
       { wch: 25 },
