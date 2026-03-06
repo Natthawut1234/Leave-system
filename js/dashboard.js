@@ -386,12 +386,16 @@ const DashboardModule = (() => {
       'ลาพักร้อน': '#0dcaf0',
       'ลาคลอด': '#0d6efd',
       'อื่นๆ': '#6c757d',
+      'มาสาย': '#fd7e14',
+      'ขาด': '#212529',
     };
+
+    const translatedLabels = labels.map((l) => I18n.translateLeaveType(l));
 
     pieChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels,
+        labels: translatedLabels,
         datasets: [
           {
             data,
@@ -444,7 +448,7 @@ const DashboardModule = (() => {
         <td><span class="badge bg-primary">${lines[r.lineId]?.name || 'Line ' + r.lineId}</span></td>
         <td>${getShiftBadge(r.shift)}</td>
         <td>${r.employeeName}</td>
-        <td><span class="badge ${getLeaveTypeBadge(r.leaveType)}">${r.leaveType}</span></td>
+        <td><span class="badge ${getLeaveTypeBadge(r.leaveType)}">${I18n.translateLeaveType(r.leaveType)}</span></td>
         <td>${r.note || '-'}</td>
       </tr>
     `
@@ -459,6 +463,8 @@ const DashboardModule = (() => {
       'ลาพักร้อน': 'bg-info',
       'ลาคลอด': 'bg-primary',
       'อื่นๆ': 'bg-secondary',
+      'มาสาย': 'bg-orange text-dark',
+      'ขาด': 'bg-dark',
     };
     return map[type] || 'bg-secondary';
   }
@@ -512,7 +518,7 @@ const DashboardModule = (() => {
         const details = dayRecords
           .map(
             (r) =>
-              `<span class="badge bg-primary me-1">${lines[r.lineId]?.name || 'L' + r.lineId}</span>${getShiftBadge(r.shift)} ${r.employeeName} <span class="badge ${getLeaveTypeBadge(r.leaveType)} badge-sm">${r.leaveType}</span>`
+              `<span class="badge bg-primary me-1">${lines[r.lineId]?.name || 'L' + r.lineId}</span>${getShiftBadge(r.shift)} ${r.employeeName} <span class="badge ${getLeaveTypeBadge(r.leaveType)} badge-sm">${I18n.translateLeaveType(r.leaveType)}</span>`
           )
           .join(', ');
 

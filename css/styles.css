@@ -630,6 +630,11 @@ body {
   }
 }
 
+/* ===== Custom Badge Colors ===== */
+.bg-orange {
+  background-color: #fd7e14 !important;
+}
+
 /* ===== Print ===== */
 @media print {
   .sidebar, .top-bar, .sidebar-overlay, .toast-container,

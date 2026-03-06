@@ -5,7 +5,7 @@ const I18n = (() => {
   const translations = {
     th: {
       // App
-      appTitle: 'ระบบบันทึกการลา - โรงงานผลิต',
+      appTitle: 'ระบบบันทึกการลา - ไลน์ผลิต',
       appSubtitle: 'Production Line Leave Management System',
       selectRole: 'เลือกบทบาท',
 
@@ -17,8 +17,8 @@ const I18n = (() => {
 
       // Roles
       roleLeader: 'Leader ไลน์ผลิต',
-      roleLeaderDesc: 'บันทึกการลาของลูกน้องประจำวัน',
-      roleManager: 'หัวหน้า Production',
+      roleLeaderDesc: 'บันทึกการลาของพนักงานประจำวัน',
+      roleManager: 'Production Manager',
       roleManagerDesc: 'ดู Dashboard ภาพรวมทุกไลน์',
 
       // Shifts
@@ -46,6 +46,9 @@ const I18n = (() => {
       downloadTemplate: 'ดาวน์โหลด Template',
       addManually: 'เพิ่มเอง',
       confirmDelete: 'ยืนยันการลบ?',
+      selectAll: 'เลือกทั้งหมด',
+      deleteSelected: 'ลบที่เลือก',
+      confirmDeleteSelected: 'ยืนยันลบพนักงานที่เลือก {count} คน?',
       leaderName: 'ชื่อ Leader',
       lineSetup: 'ตั้งค่าไลน์ผลิต',
       saveSetup: 'บันทึกการตั้งค่า',
@@ -59,6 +62,8 @@ const I18n = (() => {
       leaveTypeVacation: 'ลาพักร้อน',
       leaveTypeMaternity: 'ลาคลอด',
       leaveTypeOther: 'อื่นๆ',
+      leaveTypeLate: 'มาสาย',
+      leaveTypeAbsent: 'ขาด',
 
       // Dashboard
       dashboardTitle: 'Dashboard - สรุปภาพรวม',
@@ -95,6 +100,51 @@ const I18n = (() => {
       exportSuccess: 'สำรองข้อมูลสำเร็จ!',
       importSuccess: 'นำเข้าข้อมูลสำเร็จ!',
       importError: 'ไฟล์ไม่ถูกต้อง',
+      exportDataHint: 'สำรองข้อมูลทั้งหมดเป็นไฟล์ JSON (เผื่อกรณีฉุกเฉิน)',
+      importDataHint: 'นำเข้าข้อมูลจากไฟล์สำรอง JSON (ข้อมูลเดิมจะถูกแทนที่)',
+      clearDataHint: 'ลบข้อมูลทั้งหมดในระบบ (ไม่สามารถกู้คืนได้)',
+
+      // Connection / File
+      connectedExcelFile: 'ไฟล์ Excel ที่เชื่อมต่อ',
+      dataStoredInFile: 'ข้อมูลทั้งหมดเก็บในไฟล์นี้',
+      connected: 'เชื่อมต่อแล้ว',
+      refreshData: 'รีเฟรชข้อมูล',
+      changeFile: 'เปลี่ยนไฟล์',
+      refreshDataFromFile: 'รีเฟรชข้อมูลจากไฟล์',
+      refreshSuccess: 'รีเฟรชข้อมูลสำเร็จ!',
+      connectionError: 'ไม่สามารถเชื่อมต่อได้',
+      changeFileConfirm: 'ต้องการเปลี่ยนไฟล์ Excel? ระบบจะกลับไปหน้าเลือกไฟล์',
+      dataMigrated: 'ย้ายข้อมูลจาก browser เดิมมาแล้ว!',
+      noFile: 'ไม่มีไฟล์',
+      connHowToUse: 'วิธีใช้:',
+      connSelectExcel: 'เลือกไฟล์ Excel (.xlsx) ที่จะใช้เก็บข้อมูล',
+      connSharedDrive: 'วางไฟล์ไว้บน shared drive / network drive เพื่อให้ทุกคนเข้าถึงได้',
+      connSameFile: 'เลือกไฟล์เดียวกัน',
+      connAutoSave: 'ข้อมูลจะอ่าน/เขียนลงไฟล์นั้นอัตโนมัติ',
+      openExistingFile: 'เปิดไฟล์ Excel ที่มีอยู่',
+      createNewFile: 'สร้างไฟล์ใหม่',
+      reconnectFile: 'เชื่อมต่อไฟล์เดิม (ให้สิทธิ์)',
+      browserNotSupported: 'Browser ไม่รองรับ File System API',
+      browserHint: 'กรุณาใช้ Google Chrome หรือ Microsoft Edge เวอร์ชันล่าสุด',
+      browserRequirement: 'ต้องใช้ Chrome หรือ Edge | v2.0 - Excel Storage',
+      dataInSystem: 'ข้อมูลในระบบ',
+      productionLines: 'ไลน์ผลิต',
+      employees: 'พนักงาน',
+      leaveRecords: 'บันทึกการลา',
+
+      // Line Management
+      lineManagement: 'จัดการไลน์ผลิต',
+      lineManagementHint: 'เพิ่มหรือลดจำนวนไลน์ผลิตตามต้องการ',
+      currentLineCount: 'จำนวนไลน์ปัจจุบัน',
+      setLineCount: 'ตั้งค่าจำนวนไลน์',
+      addLines: 'เพิ่มไลน์',
+      removeLines: 'ลดไลน์',
+      applyLineCount: 'บันทึก',
+      lineCountUpdated: 'อัปเดตไลน์ผลิตเรียบร้อยแล้ว!',
+      confirmRemoveLines: 'ยืนยันลดไลน์จาก {from} เหลือ {to} ไลน์? ข้อมูลพนักงานและการลาในไลน์ที่ถูกลบจะหายไป',
+      confirmRemoveLinesWarning: 'คำเตือน: ไลน์ที่ถูกลบอาจมีข้อมูลพนักงานอยู่',
+      invalidLineCount: 'กรุณาระบุจำนวนไลน์ที่ถูกต้อง (1-200)',
+      linesLabel: 'ไลน์',
 
       // Search & Filter
       searchEmployee: 'ค้นหาพนักงาน...',
@@ -161,6 +211,9 @@ const I18n = (() => {
       downloadTemplate: 'Download Template',
       addManually: 'Add Manually',
       confirmDelete: 'Confirm delete?',
+      selectAll: 'Select All',
+      deleteSelected: 'Delete Selected',
+      confirmDeleteSelected: 'Confirm delete {count} selected employees?',
       leaderName: 'Leader Name',
       lineSetup: 'Line Setup',
       saveSetup: 'Save Setup',
@@ -174,6 +227,8 @@ const I18n = (() => {
       leaveTypeVacation: 'Vacation',
       leaveTypeMaternity: 'Maternity Leave',
       leaveTypeOther: 'Other',
+      leaveTypeLate: 'Late',
+      leaveTypeAbsent: 'Absent',
 
       // Dashboard
       dashboardTitle: 'Dashboard - Overview',
@@ -210,6 +265,51 @@ const I18n = (() => {
       exportSuccess: 'Data exported successfully!',
       importSuccess: 'Data imported successfully!',
       importError: 'Invalid file',
+      exportDataHint: 'Backup all data as a JSON file (for emergencies)',
+      importDataHint: 'Import data from a JSON backup file (old data will be replaced)',
+      clearDataHint: 'Delete all data in the system (cannot be recovered)',
+
+      // Connection / File
+      connectedExcelFile: 'Connected Excel File',
+      dataStoredInFile: 'All data is stored in this file',
+      connected: 'Connected',
+      refreshData: 'Refresh Data',
+      changeFile: 'Change File',
+      refreshDataFromFile: 'Refresh data from file',
+      refreshSuccess: 'Data refreshed successfully!',
+      connectionError: 'Connection failed',
+      changeFileConfirm: 'Change Excel file? The system will return to the file selection screen.',
+      dataMigrated: 'Data migrated from browser storage!',
+      noFile: 'No file',
+      connHowToUse: 'How to use:',
+      connSelectExcel: 'Select an Excel file (.xlsx) to store data',
+      connSharedDrive: 'Place the file on a shared drive / network drive for everyone to access',
+      connSameFile: 'Select the same file',
+      connAutoSave: 'Data will be automatically read/written to the file',
+      openExistingFile: 'Open Existing Excel File',
+      createNewFile: 'Create New File',
+      reconnectFile: 'Reconnect to Previous File (Grant Permission)',
+      browserNotSupported: 'Browser does not support File System API',
+      browserHint: 'Please use the latest version of Google Chrome or Microsoft Edge',
+      browserRequirement: 'Requires Chrome or Edge | v2.0 - Excel Storage',
+      dataInSystem: 'Data in System',
+      productionLines: 'Production Lines',
+      employees: 'Employees',
+      leaveRecords: 'Leave Records',
+
+      // Line Management
+      lineManagement: 'Production Line Management',
+      lineManagementHint: 'Add or reduce the number of production lines as needed',
+      currentLineCount: 'Current Lines',
+      setLineCount: 'Set Line Count',
+      addLines: 'Add Lines',
+      removeLines: 'Remove Lines',
+      applyLineCount: 'Apply',
+      lineCountUpdated: 'Production lines updated successfully!',
+      confirmRemoveLines: 'Confirm reducing lines from {from} to {to}? Employee data and leave records in removed lines will be lost.',
+      confirmRemoveLinesWarning: 'Warning: Lines being removed may contain employee data.',
+      invalidLineCount: 'Please enter a valid line count (1-200)',
+      linesLabel: 'lines',
 
       // Search & Filter
       searchEmployee: 'Search employee...',
@@ -251,6 +351,21 @@ const I18n = (() => {
     return translations[currentLang][key] || translations['th'][key] || key;
   }
 
+  const leaveTypeKeyMap = {
+    'ลาป่วย': 'leaveTypeSick',
+    'ลากิจ': 'leaveTypePersonal',
+    'ลาพักร้อน': 'leaveTypeVacation',
+    'ลาคลอด': 'leaveTypeMaternity',
+    'อื่นๆ': 'leaveTypeOther',
+    'มาสาย': 'leaveTypeLate',
+    'ขาด': 'leaveTypeAbsent',
+  };
+
+  function translateLeaveType(thaiType) {
+    const key = leaveTypeKeyMap[thaiType];
+    return key ? t(key) : thaiType;
+  }
+
   function translatePage() {
     document.querySelectorAll('[data-i18n]').forEach((el) => {
       const key = el.getAttribute('data-i18n');
@@ -275,6 +390,7 @@ const I18n = (() => {
     setLanguage,
     getLanguage,
     t,
+    translateLeaveType,
     translatePage,
     init,
   };

@@ -27,6 +27,7 @@ const App = (() => {
 
   function renderConnectionScreen() {
     const supported = ExcelStorage.isSupported();
+    const t = I18n.t;
 
     document.body.innerHTML = `
       <div class="toast-container" id="toast-container"></div>
@@ -35,46 +36,46 @@ const App = (() => {
           <div class="icon-circle">
             <i class="bi bi-file-earmark-excel"></i>
           </div>
-          <h2>ระบบบันทึกการลา</h2>
+          <h2>${t('appTitle')}</h2>
           <p class="subtitle">Production Line Leave System</p>
 
           ${supported ? `
             <div class="alert alert-info text-start mb-4">
               <i class="bi bi-info-circle me-2"></i>
-              <strong>วิธีใช้:</strong> เลือกไฟล์ Excel (.xlsx) ที่จะใช้เก็บข้อมูล<br>
+              <strong>${t('connHowToUse')}</strong> ${t('connSelectExcel')}<br>
               <small class="text-muted">
-                - วางไฟล์ไว้บน <strong>shared drive / network drive</strong> เพื่อให้ทุกคนเข้าถึงได้<br>
-                - ทุก Leader + หัวหน้า เลือกไฟล์เดียวกัน<br>
-                - ข้อมูลจะอ่าน/เขียนลงไฟล์นั้นอัตโนมัติ
+                - ${t('connSharedDrive')}<br>
+                - ${t('connSameFile')}<br>
+                - ${t('connAutoSave')}
               </small>
             </div>
 
             <div class="d-grid gap-3 mb-4">
               <button class="btn btn-success btn-lg" id="btn-open-file">
-                <i class="bi bi-folder2-open me-2"></i> เปิดไฟล์ Excel ที่มีอยู่
+                <i class="bi bi-folder2-open me-2"></i> ${t('openExistingFile')}
               </button>
               <button class="btn btn-outline-success btn-lg" id="btn-new-file">
-                <i class="bi bi-file-earmark-plus me-2"></i> สร้างไฟล์ใหม่
+                <i class="bi bi-file-earmark-plus me-2"></i> ${t('createNewFile')}
               </button>
             </div>
 
             <div id="reconnect-section" style="display:none;">
               <hr>
               <button class="btn btn-outline-primary" id="btn-reconnect">
-                <i class="bi bi-arrow-repeat me-2"></i> เชื่อมต่อไฟล์เดิม (ให้สิทธิ์)
+                <i class="bi bi-arrow-repeat me-2"></i> ${t('reconnectFile')}
               </button>
             </div>
           ` : `
             <div class="alert alert-warning text-start mb-4">
               <i class="bi bi-exclamation-triangle me-2"></i>
-              <strong>Browser ไม่รองรับ File System API</strong><br>
-              <small>กรุณาใช้ <strong>Google Chrome</strong> หรือ <strong>Microsoft Edge</strong> เวอร์ชันล่าสุด</small>
+              <strong>${t('browserNotSupported')}</strong><br>
+              <small>${t('browserHint')}</small>
             </div>
           `}
 
           <div class="mt-3">
             <small class="text-muted">
-              ต้องใช้ Chrome หรือ Edge | v2.0 - Excel Storage
+              ${t('browserRequirement')}
             </small>
           </div>
         </div>
@@ -114,7 +115,7 @@ const App = (() => {
               startApp();
             }
           } catch (err) {
-            showToast('ไม่สามารถเชื่อมต่อได้: ' + err.message, 'danger');
+            showToast(I18n.t('connectionError') + ': ' + err.message, 'danger');
           }
         });
       }
@@ -131,13 +132,13 @@ const App = (() => {
       const migrated = DataManager.migrateFromLocalStorage();
       if (migrated) {
         await DataManager.forceSave();
-        showToast('ย้ายข้อมูลจาก browser เดิมมาแล้ว!', 'success');
+        showToast(I18n.t('dataMigrated'), 'success');
       }
 
       startApp();
     } catch (err) {
       if (err.name !== 'AbortError') {
-        showToast('เกิดข้อผิดพลาด: ' + err.message, 'danger');
+        showToast(I18n.t('error') + ': ' + err.message, 'danger');
       }
     }
   }
@@ -152,7 +153,7 @@ const App = (() => {
       const migrated = DataManager.migrateFromLocalStorage();
       if (migrated) {
         await DataManager.forceSave();
-        showToast('ย้ายข้อมูลจาก browser เดิมมาแล้ว!', 'success');
+        showToast(I18n.t('dataMigrated'), 'success');
       } else {
         await DataManager.forceSave();
       }
@@ -160,7 +161,7 @@ const App = (() => {
       startApp();
     } catch (err) {
       if (err.name !== 'AbortError') {
-        showToast('เกิดข้อผิดพลาด: ' + err.message, 'danger');
+        showToast(I18n.t('error') + ': ' + err.message, 'danger');
       }
     }
   }
@@ -224,10 +225,10 @@ const App = (() => {
             <small class="text-white-50 text-truncate" title="${fileName}" style="max-width:180px;display:inline-block;">${fileName}</small>
           </div>
           <button class="btn btn-outline-light btn-sm w-100 mb-2" onclick="App.refreshData()">
-            <i class="bi bi-arrow-clockwise me-1"></i> รีเฟรชข้อมูล
+            <i class="bi bi-arrow-clockwise me-1"></i> ${t('refreshData')}
           </button>
           <button class="btn btn-outline-warning btn-sm w-100" onclick="App.disconnectFile()">
-            <i class="bi bi-box-arrow-left me-1"></i> เปลี่ยนไฟล์
+            <i class="bi bi-box-arrow-left me-1"></i> ${t('changeFile')}
           </button>
         </div>
       </nav>
@@ -248,7 +249,7 @@ const App = (() => {
               <span class="pulse-dot"></span>
               <small class="text-muted">${fileName}</small>
             </div>
-            <button class="btn btn-outline-secondary btn-sm" onclick="App.refreshData()" title="รีเฟรชข้อมูลจากไฟล์">
+            <button class="btn btn-outline-secondary btn-sm" onclick="App.refreshData()" title="${t('refreshDataFromFile')}">
               <i class="bi bi-arrow-clockwise"></i>
             </button>
             <div class="lang-switch">
@@ -363,13 +364,13 @@ const App = (() => {
   function renderSettings() {
     const t = I18n.t;
     const settings = DataManager.getSettings();
-    const fileName = ExcelStorage.getFileName() || 'ไม่มีไฟล์';
+    const fileName = ExcelStorage.getFileName() || t('noFile');
     document.getElementById('main-content').innerHTML = `
       <div class="container py-4 animate-fade-in-up" style="max-width: 700px;">
         <!-- File Connection Info -->
         <div class="card shadow-sm border-0 mb-3" style="border-left: 4px solid var(--success) !important;">
           <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-file-earmark-excel text-success"></i> ไฟล์ Excel ที่เชื่อมต่อ</h5>
+            <h5 class="mb-0"><i class="bi bi-file-earmark-excel text-success"></i> ${t('connectedExcelFile')}</h5>
           </div>
           <div class="card-body">
             <div class="d-flex align-items-center gap-3 mb-3">
@@ -378,16 +379,41 @@ const App = (() => {
               </div>
               <div>
                 <h6 class="mb-0 fw-bold">${fileName}</h6>
-                <small class="text-muted">ข้อมูลทั้งหมดเก็บในไฟล์นี้</small>
+                <small class="text-muted">${t('dataStoredInFile')}</small>
               </div>
-              <span class="badge bg-success ms-auto"><span class="pulse-dot me-1" style="background:#fff;"></span> เชื่อมต่อแล้ว</span>
+              <span class="badge bg-success ms-auto"><span class="pulse-dot me-1" style="background:#fff;"></span> ${t('connected')}</span>
             </div>
             <div class="d-flex gap-2">
               <button class="btn btn-outline-primary btn-sm" onclick="App.refreshData()">
-                <i class="bi bi-arrow-clockwise me-1"></i> รีเฟรชข้อมูล
+                <i class="bi bi-arrow-clockwise me-1"></i> ${t('refreshData')}
               </button>
               <button class="btn btn-outline-warning btn-sm" onclick="App.disconnectFile()">
-                <i class="bi bi-box-arrow-left me-1"></i> เปลี่ยนไฟล์
+                <i class="bi bi-box-arrow-left me-1"></i> ${t('changeFile')}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Line Management -->
+        <div class="card shadow-sm border-0 mb-3" style="border-left: 4px solid var(--primary) !important;">
+          <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="bi bi-diagram-3 text-primary"></i> ${t('lineManagement')}</h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted small mb-3">${t('lineManagementHint')}</p>
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div>
+                <span class="fw-bold">${t('currentLineCount')}:</span>
+                <span class="badge bg-primary fs-6 ms-2">${Object.keys(DataManager.getLines()).length} ${t('linesLabel')}</span>
+              </div>
+            </div>
+            <div class="input-group" style="max-width: 350px;">
+              <span class="input-group-text">${t('setLineCount')}</span>
+              <input type="number" id="line-count-input" class="form-control" 
+                     min="1" max="200" value="${Object.keys(DataManager.getLines()).length}" 
+                     placeholder="1-200">
+              <button class="btn btn-primary" id="btn-apply-line-count">
+                <i class="bi bi-check-lg me-1"></i>${t('applyLineCount')}
               </button>
             </div>
           </div>
@@ -416,7 +442,7 @@ const App = (() => {
             <!-- Export JSON backup -->
             <div class="mb-4">
               <label class="form-label fw-bold">${t('exportData')}</label>
-              <p class="text-muted small">สำรองข้อมูลทั้งหมดเป็นไฟล์ JSON (เผื่อกรณีฉุกเฉิน)</p>
+              <p class="text-muted small">${t('exportDataHint')}</p>
               <button class="btn btn-outline-success" id="btn-export-data">
                 <i class="bi bi-download"></i> ${t('exportData')}
               </button>
@@ -425,14 +451,14 @@ const App = (() => {
             <!-- Import JSON -->
             <div class="mb-4">
               <label class="form-label fw-bold">${t('importData')}</label>
-              <p class="text-muted small">นำเข้าข้อมูลจากไฟล์สำรอง JSON (ข้อมูลเดิมจะถูกแทนที่)</p>
+              <p class="text-muted small">${t('importDataHint')}</p>
               <input type="file" id="import-file" class="form-control" accept=".json">
             </div>
             <hr>
             <!-- Clear -->
             <div>
               <label class="form-label fw-bold text-danger">${t('clearData')}</label>
-              <p class="text-muted small">ลบข้อมูลทั้งหมดในระบบ (ไม่สามารถกู้คืนได้)</p>
+              <p class="text-muted small">${t('clearDataHint')}</p>
               <button class="btn btn-outline-danger" id="btn-clear-data">
                 <i class="bi bi-trash"></i> ${t('clearData')}
               </button>
@@ -443,7 +469,7 @@ const App = (() => {
         <!-- Data Stats -->
         <div class="card shadow-sm border-0">
           <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-database"></i> ข้อมูลในระบบ</h5>
+            <h5 class="mb-0"><i class="bi bi-database"></i> ${t('dataInSystem')}</h5>
           </div>
           <div class="card-body">
             ${renderDataStats()}
@@ -462,11 +488,15 @@ const App = (() => {
     document
       .getElementById('btn-clear-data')
       .addEventListener('click', clearData);
+    document
+      .getElementById('btn-apply-line-count')
+      .addEventListener('click', updateLineCount);
   }
 
   function renderDataStats() {
     const lines = DataManager.getLines();
     const records = DataManager.getLeaveRecords();
+    const t = I18n.t;
     let totalEmployees = 0;
     let linesWithEmployees = 0;
     Object.values(lines).forEach((l) => {
@@ -484,7 +514,7 @@ const App = (() => {
             <div class="card-body py-3">
               <i class="bi bi-diagram-3" style="font-size:1.5rem;"></i>
               <h2 class="mb-0 mt-1">${Object.keys(lines).length}</h2>
-              <small class="opacity-75">ไลน์ผลิต</small>
+              <small class="opacity-75">${t('productionLines')}</small>
             </div>
           </div>
         </div>
@@ -493,7 +523,7 @@ const App = (() => {
             <div class="card-body py-3">
               <i class="bi bi-people" style="font-size:1.5rem;"></i>
               <h2 class="mb-0 mt-1">${totalEmployees}</h2>
-              <small class="opacity-75">พนักงาน (${linesWithEmployees} ไลน์)</small>
+              <small class="opacity-75">${t('employees')} (${linesWithEmployees} ${t('lines_unit')})</small>
             </div>
           </div>
         </div>
@@ -502,7 +532,7 @@ const App = (() => {
             <div class="card-body py-3">
               <i class="bi bi-calendar-x" style="font-size:1.5rem;"></i>
               <h2 class="mb-0 mt-1">${records.length}</h2>
-              <small class="opacity-75">บันทึกการลา</small>
+              <small class="opacity-75">${t('leaveRecords')}</small>
             </div>
           </div>
         </div>
@@ -554,6 +584,52 @@ const App = (() => {
     }
   }
 
+  function updateLineCount() {
+    const t = I18n.t;
+    const input = document.getElementById('line-count-input');
+    const newCount = parseInt(input.value, 10);
+
+    if (!newCount || newCount < 1 || newCount > 200) {
+      showToast(t('invalidLineCount'), 'warning');
+      return;
+    }
+
+    const lines = DataManager.getLines();
+    const currentIds = Object.keys(lines).map(Number).sort((a, b) => a - b);
+    const currentCount = currentIds.length;
+
+    if (newCount === currentCount) return;
+
+    if (newCount > currentCount) {
+      // Add new lines starting from max+1
+      const maxId = currentIds.length > 0 ? Math.max(...currentIds) : 0;
+      for (let i = maxId + 1; i <= maxId + (newCount - currentCount); i++) {
+        DataManager.saveLine(i, {
+          id: i,
+          name: `Line ${i}`,
+          shifts: {
+            day: { leader: '', employees: [] },
+            night: { leader: '', employees: [] },
+          },
+        });
+      }
+      showToast(t('lineCountUpdated'), 'success');
+      renderSettings();
+    } else {
+      // Remove lines from the end
+      const linesToRemove = currentIds.slice(newCount);
+      // Check if any lines being removed have data
+      const msg = t('confirmRemoveLines')
+        .replace('{from}', currentCount)
+        .replace('{to}', newCount);
+      if (!confirm(msg)) return;
+
+      linesToRemove.forEach((id) => DataManager.deleteLine(id));
+      showToast(t('lineCountUpdated'), 'success');
+      renderSettings();
+    }
+  }
+
   function switchLang(lang) {
     I18n.setLanguage(lang);
     renderShell();
@@ -563,16 +639,16 @@ const App = (() => {
   async function refreshData() {
     try {
       await DataManager.refresh();
-      showToast('รีเฟรชข้อมูลสำเร็จ!', 'success');
+      showToast(I18n.t('refreshSuccess'), 'success');
       // Re-render current page
       navigateTo(currentPage, false);
     } catch (err) {
-      showToast('เกิดข้อผิดพลาด: ' + err.message, 'danger');
+      showToast(I18n.t('error') + ': ' + err.message, 'danger');
     }
   }
 
   async function disconnectFile() {
-    if (confirm('ต้องการเปลี่ยนไฟล์ Excel? ระบบจะกลับไปหน้าเลือกไฟล์')) {
+    if (confirm(I18n.t('changeFileConfirm'))) {
       await ExcelStorage.disconnect();
       location.reload();
     }

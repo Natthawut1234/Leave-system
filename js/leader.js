@@ -110,6 +110,8 @@ const LeaderModule = (() => {
                       <option value="ลาพักร้อน">${t('leaveTypeVacation')}</option>
                       <option value="ลาคลอด">${t('leaveTypeMaternity')}</option>
                       <option value="อื่นๆ">${t('leaveTypeOther')}</option>
+                      <option value="มาสาย">${t('leaveTypeLate')}</option>
+                      <option value="ขาด">${t('leaveTypeAbsent')}</option>
                     </select>
                   </div>
                   <div class="mb-3">
@@ -152,6 +154,16 @@ const LeaderModule = (() => {
                     <span class="input-group-text"><i class="bi bi-funnel"></i></span>
                     <input type="text" id="employee-list-filter" class="form-control form-control-sm" 
                            placeholder="${t('filterEmployee')}">
+                  </div>
+                  <!-- Select all & Delete selected -->
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="select-all-emp">
+                      <label class="form-check-label small" for="select-all-emp">${t('selectAll')}</label>
+                    </div>
+                    <button id="btn-delete-selected" class="btn btn-danger btn-sm" style="display:none;">
+                      <i class="bi bi-trash"></i> ${t('deleteSelected')} (<span id="selected-count">0</span>)
+                    </button>
                   </div>
                   <!-- Employee list -->
                   <div id="employee-list" class="list-group" style="max-height: 400px; overflow-y: auto;">
@@ -445,6 +457,28 @@ const LeaderModule = (() => {
         }
       });
     });
+
+    // Select all checkbox
+    document.getElementById('select-all-emp').addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      document.querySelectorAll('#employee-list .emp-checkbox').forEach((cb) => {
+        // Only check visible items
+        if (!cb.closest('.list-group-item').classList.contains('d-none')) {
+          cb.checked = checked;
+        }
+      });
+      updateDeleteSelectedBtn();
+    });
+
+    // Individual checkbox change (event delegation)
+    document.getElementById('employee-list').addEventListener('change', (e) => {
+      if (e.target.classList.contains('emp-checkbox')) {
+        updateDeleteSelectedBtn();
+      }
+    });
+
+    // Delete selected button
+    document.getElementById('btn-delete-selected').addEventListener('click', removeSelectedEmployees);
   }
 
   function refreshData() {
@@ -518,7 +552,10 @@ const LeaderModule = (() => {
       .map(
         (emp, idx) => `
       <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2">
-        <span><small class="text-muted">${idx + 1}.</small> ${emp}</span>
+        <div class="d-flex align-items-center gap-2">
+          <input class="form-check-input emp-checkbox" type="checkbox" value="${escapeHtml(emp)}">
+          <span><small class="text-muted">${idx + 1}.</small> ${emp}</span>
+        </div>
         <button class="btn btn-outline-danger btn-sm" onclick="LeaderModule.removeEmp('${escapeHtml(emp)}')">
           <i class="bi bi-x"></i>
         </button>
@@ -526,6 +563,14 @@ const LeaderModule = (() => {
     `
       )
       .join('');
+
+    // Reset select-all and delete-selected button
+    const selectAllCb = document.getElementById('select-all-emp');
+    if (selectAllCb) selectAllCb.checked = false;
+    const btnDeleteSel = document.getElementById('btn-delete-selected');
+    if (btnDeleteSel) { btnDeleteSel.style.display = 'none'; }
+    const selCount = document.getElementById('selected-count');
+    if (selCount) selCount.textContent = '0';
   }
 
   function refreshEmployeeSelect() {
@@ -609,7 +654,7 @@ const LeaderModule = (() => {
       <tr>
         <td>${idx + 1}</td>
         <td><strong>${leave.employeeName}</strong></td>
-        <td><span class="badge ${getLeaveTypeBadge(leave.leaveType)}">${leave.leaveType}</span></td>
+        <td><span class="badge ${getLeaveTypeBadge(leave.leaveType)}">${I18n.translateLeaveType(leave.leaveType)}</span></td>
         <td>${leave.note || '-'}</td>
         <td>
           <button class="btn btn-outline-danger btn-sm" onclick="LeaderModule.removeLeave('${leave.id}')">
@@ -629,6 +674,8 @@ const LeaderModule = (() => {
       'ลาพักร้อน': 'bg-info',
       'ลาคลอด': 'bg-primary',
       'อื่นๆ': 'bg-secondary',
+      'มาสาย': 'bg-orange text-dark',
+      'ขาด': 'bg-dark',
     };
     return map[type] || 'bg-secondary';
   }
@@ -666,6 +713,29 @@ const LeaderModule = (() => {
 
     DataManager.addEmployee(currentLineId, currentShift, name);
     input.value = '';
+    refreshEmployeeList();
+    refreshEmployeeSelect();
+    refreshStats();
+  }
+
+  function updateDeleteSelectedBtn() {
+    const checked = document.querySelectorAll('#employee-list .emp-checkbox:checked');
+    const btn = document.getElementById('btn-delete-selected');
+    const countEl = document.getElementById('selected-count');
+    if (btn) btn.style.display = checked.length > 0 ? 'inline-block' : 'none';
+    if (countEl) countEl.textContent = checked.length;
+    // Sync select-all checkbox
+    const allCbs = document.querySelectorAll('#employee-list .emp-checkbox');
+    const selectAll = document.getElementById('select-all-emp');
+    if (selectAll) selectAll.checked = allCbs.length > 0 && checked.length === allCbs.length;
+  }
+
+  function removeSelectedEmployees() {
+    const checked = document.querySelectorAll('#employee-list .emp-checkbox:checked');
+    if (checked.length === 0) return;
+    const names = Array.from(checked).map((cb) => cb.value.replace(/\\'/g, "'"));
+    if (!confirm(I18n.t('confirmDeleteSelected').replace('{count}', names.length))) return;
+    names.forEach((name) => DataManager.removeEmployee(currentLineId, currentShift, name));
     refreshEmployeeList();
     refreshEmployeeSelect();
     refreshStats();
@@ -789,7 +859,7 @@ const LeaderModule = (() => {
           html += `<tr>
           ${i === 0 ? `<td rowspan="${grouped[date].length}" class="fw-bold">${date}</td>` : ''}
           <td>${r.employeeName}</td>
-          <td><span class="badge ${getLeaveTypeBadge(r.leaveType)}">${r.leaveType}</span></td>
+          <td><span class="badge ${getLeaveTypeBadge(r.leaveType)}">${I18n.translateLeaveType(r.leaveType)}</span></td>
           <td>${r.note || '-'}</td>
         </tr>`;
         });
