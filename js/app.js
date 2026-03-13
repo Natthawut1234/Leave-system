@@ -208,6 +208,11 @@ const App = (() => {
             </a>
           </li>
           <li class="nav-item">
+            <a class="nav-link" href="#" data-page="booking" id="nav-booking">
+              <i class="bi bi-calendar2-check"></i> <span data-i18n="navBooking">${t('navBooking')}</span>
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" href="#" data-page="dashboard" id="nav-dashboard">
               <i class="bi bi-speedometer2"></i> <span data-i18n="navDashboard">${t('navDashboard')}</span>
             </a>
@@ -298,6 +303,7 @@ const App = (() => {
     const titles = {
       home: t('selectRole'),
       leader: t('navLeader'),
+      booking: t('navBooking'),
       dashboard: t('navDashboard'),
       settings: t('navSettings'),
     };
@@ -310,6 +316,9 @@ const App = (() => {
         break;
       case 'leader':
         LeaderModule.render();
+        break;
+      case 'booking':
+        PersonalBookingModule.render();
         break;
       case 'dashboard':
         DashboardModule.render();
@@ -334,7 +343,7 @@ const App = (() => {
           <p class="text-muted">${t('selectRole')}</p>
         </div>
         <div class="row justify-content-center g-4 animate-stagger">
-          <div class="col-md-5">
+          <div class="col-md-4">
             <div class="card role-card leader-card" onclick="App.navigateTo('leader')">
               <div class="card-body">
                 <div class="icon-wrap">
@@ -345,7 +354,18 @@ const App = (() => {
               </div>
             </div>
           </div>
-          <div class="col-md-5">
+          <div class="col-md-4">
+            <div class="card role-card" onclick="App.navigateTo('booking')">
+              <div class="card-body">
+                <div class="icon-wrap">
+                  <i class="bi bi-calendar2-check"></i>
+                </div>
+                <h3>${t('roleBooking')}</h3>
+                <p class="mb-0 opacity-75">${t('roleBookingDesc')}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
             <div class="card role-card manager-card" onclick="App.navigateTo('dashboard')">
               <div class="card-body">
                 <div class="icon-wrap">
@@ -365,6 +385,7 @@ const App = (() => {
     const t = I18n.t;
     const settings = DataManager.getSettings();
     const fileName = ExcelStorage.getFileName() || t('noFile');
+    const employeeMaster = DataManager.getEmployeeMaster();
     document.getElementById('main-content').innerHTML = `
       <div class="container py-4 animate-fade-in-up" style="max-width: 700px;">
         <!-- File Connection Info -->
@@ -439,6 +460,21 @@ const App = (() => {
               </div>
             </div>
             <hr>
+            <!-- Employee Master Upload -->
+            <div class="mb-4">
+              <label class="form-label fw-bold">${t('employeeMasterData')}</label>
+              <p class="text-muted small mb-2">${t('uploadEmployeeMasterHint')}</p>
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <input type="file" id="employee-master-file" class="form-control" accept=".xlsx,.xls">
+                <button class="btn btn-outline-primary text-nowrap" id="btn-upload-employee-master">
+                  <i class="bi bi-upload me-1"></i>${t('uploadEmployeeMaster')}
+                </button>
+              </div>
+              <small class="text-muted">
+                ${t('employeeMasterRows')}: <strong>${employeeMaster.rows.length}</strong>
+              </small>
+            </div>
+            <hr>
             <!-- Export JSON backup -->
             <div class="mb-4">
               <label class="form-label fw-bold">${t('exportData')}</label>
@@ -491,21 +527,18 @@ const App = (() => {
     document
       .getElementById('btn-apply-line-count')
       .addEventListener('click', updateLineCount);
+    document
+      .getElementById('btn-upload-employee-master')
+      .addEventListener('click', importEmployeeMasterFromExcel);
   }
 
   function renderDataStats() {
     const lines = DataManager.getLines();
     const records = DataManager.getLeaveRecords();
+    const masterEmployees = DataManager.getEmployeeMasterEmployeeList();
     const t = I18n.t;
-    let totalEmployees = 0;
-    let linesWithEmployees = 0;
-    Object.values(lines).forEach((l) => {
-      const shifts = l.shifts || {};
-      const dayCount = shifts.day?.employees?.length || 0;
-      const nightCount = shifts.night?.employees?.length || 0;
-      totalEmployees += dayCount + nightCount;
-      if (dayCount > 0 || nightCount > 0) linesWithEmployees++;
-    });
+    const totalEmployees = masterEmployees.length;
+    const linesWithEmployees = totalEmployees > 0 ? Object.keys(lines).length : 0;
 
     return `
       <div class="row text-center g-3 animate-stagger">
@@ -562,7 +595,7 @@ const App = (() => {
     reader.onload = function (evt) {
       try {
         const data = JSON.parse(evt.target.result);
-        if (data.lines || data.leaveRecords) {
+        if (data.lines || data.leaveRecords || data.employeeMaster) {
           DataManager.importAllData(data);
           showToast(I18n.t('importSuccess'), 'success');
           setTimeout(() => location.reload(), 1000);
@@ -574,6 +607,53 @@ const App = (() => {
       }
     };
     reader.readAsText(file);
+  }
+
+  function importEmployeeMasterFromExcel() {
+    const input = document.getElementById('employee-master-file');
+    const file = input?.files?.[0];
+    if (!file) {
+      showToast(I18n.t('importError'), 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (evt) {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const matrix = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          defval: '',
+        });
+
+        if (!matrix.length || !matrix[0] || matrix[0].length === 0) {
+          showToast(I18n.t('employeeMasterInvalid'), 'danger');
+          return;
+        }
+
+        const headers = matrix[0].map((h) => String(h || '').trim());
+        if (headers.every((h) => !h)) {
+          showToast(I18n.t('employeeMasterInvalid'), 'danger');
+          return;
+        }
+
+        const rows = matrix.slice(1).filter((row) =>
+          row.some((cell) => String(cell || '').trim() !== '')
+        );
+
+        DataManager.setEmployeeMaster(headers, rows);
+        showToast(I18n.t('employeeMasterUploaded'), 'success');
+        renderSettings();
+      } catch (err) {
+        console.error(err);
+        showToast(I18n.t('employeeMasterInvalid'), 'danger');
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
   }
 
   function clearData() {

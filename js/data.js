@@ -8,6 +8,8 @@ const DataManager = (() => {
   let cache = {
     lines: {},
     leaveRecords: [],
+    personalLeaveBookings: [],
+    employeeMaster: { headers: [], rows: [] },
     settings: { language: 'th', currentLineId: null, currentShift: 'day', leaderName: '' },
   };
 
@@ -25,6 +27,8 @@ const DataManager = (() => {
       const data = await ExcelStorage.readData();
       cache.lines = data.lines || {};
       cache.leaveRecords = data.leaveRecords || [];
+      cache.personalLeaveBookings = data.personalLeaveBookings || [];
+      cache.employeeMaster = data.employeeMaster || { headers: [], rows: [] };
       cache.settings = { ...cache.settings, ...(data.settings || {}) };
       return true;
     } catch (err) {
@@ -44,6 +48,8 @@ const DataManager = (() => {
         await ExcelStorage.writeData({
           lines: cache.lines,
           leaveRecords: cache.leaveRecords,
+          personalLeaveBookings: cache.personalLeaveBookings,
+          employeeMaster: cache.employeeMaster,
           settings: cache.settings,
         });
         updateStatusIndicator(true);
@@ -64,6 +70,8 @@ const DataManager = (() => {
       await ExcelStorage.writeData({
         lines: cache.lines,
         leaveRecords: cache.leaveRecords,
+        personalLeaveBookings: cache.personalLeaveBookings,
+        employeeMaster: cache.employeeMaster,
         settings: cache.settings,
       });
       updateStatusIndicator(true);
@@ -146,6 +154,17 @@ const DataManager = (() => {
   // ===== EMPLOYEE MANAGEMENT =====
 
   function getEmployees(lineId, shift) {
+    const masterEmployees = getEmployeeMasterEmployeeList();
+    if (masterEmployees.length > 0) {
+      return masterEmployees
+        .filter((emp) => {
+          if (!shift) return true;
+          if (!emp.shift) return true;
+          return emp.shift === shift;
+        })
+        .map((emp) => emp.employeeName);
+    }
+
     const line = getLine(lineId);
     if (!line || !line.shifts) return [];
     return line.shifts[shift]?.employees || [];
@@ -215,6 +234,156 @@ const DataManager = (() => {
     return cache.leaveRecords.filter(
       (r) => r.date >= startDate && r.date <= endDate
     );
+  }
+
+  // ===== PERSONAL LEAVE BOOKINGS =====
+
+  function getPersonalLeaveBookings() {
+    return cache.personalLeaveBookings;
+  }
+
+  function getPersonalLeaveBookingsByDate(date) {
+    return cache.personalLeaveBookings.filter((b) => b.date === date);
+  }
+
+  function getPersonalLeaveBookingsByDateLineShift(date, lineId, shift) {
+    return cache.personalLeaveBookings.filter(
+      (b) => b.date === date && String(b.lineId) === String(lineId) &&
+        (!shift || b.shift === shift)
+    );
+  }
+
+  function getPersonalLeaveBookingCountByDate(date) {
+    return getPersonalLeaveBookingsByDate(date).length;
+  }
+
+  function addPersonalLeaveBooking(booking) {
+    const record = {
+      ...booking,
+      id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      createdAt: new Date().toISOString(),
+      shift: booking.shift || 'day',
+      leaveType: 'ลากิจ',
+    };
+    cache.personalLeaveBookings.push(record);
+    saveToFile();
+    return record;
+  }
+
+  function removePersonalLeaveBooking(bookingId) {
+    cache.personalLeaveBookings = cache.personalLeaveBookings.filter(
+      (b) => b.id !== bookingId
+    );
+    saveToFile();
+  }
+
+  // ===== EMPLOYEE MASTER DATA =====
+
+  function getEmployeeMaster() {
+    const headers = Array.isArray(cache.employeeMaster?.headers)
+      ? [...cache.employeeMaster.headers]
+      : [];
+    const rows = Array.isArray(cache.employeeMaster?.rows)
+      ? cache.employeeMaster.rows.map((r) => [...r])
+      : [];
+    return { headers, rows };
+  }
+
+  function setEmployeeMaster(headers, rows) {
+    cache.employeeMaster = {
+      headers: Array.isArray(headers) ? headers.map((h) => String(h || '')) : [],
+      rows: Array.isArray(rows)
+        ? rows.map((row) => (Array.isArray(row) ? row.map((cell) => cell ?? '') : []))
+        : [],
+    };
+    saveToFile();
+    return getEmployeeMaster();
+  }
+
+  function normalizeHeader(header) {
+    return String(header || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9ก-๙]/g, '');
+  }
+
+  function findColumnIndex(headers, candidates) {
+    const normalizedHeaders = headers.map((h) => normalizeHeader(h));
+    const normalizedCandidates = candidates.map((c) => normalizeHeader(c));
+    for (let i = 0; i < normalizedHeaders.length; i++) {
+      if (normalizedCandidates.includes(normalizedHeaders[i])) return i;
+    }
+    for (let i = 0; i < normalizedHeaders.length; i++) {
+      if (normalizedCandidates.some((c) => normalizedHeaders[i].includes(c))) return i;
+    }
+    return -1;
+  }
+
+  function normalizeShift(value) {
+    const v = String(value || '').trim().toLowerCase();
+    if (!v) return '';
+    if (['day', 'd', 'dayshift', 'เช้า', 'กะเช้า', 'กลางวัน'].includes(v)) {
+      return 'day';
+    }
+    if (['night', 'n', 'nightshift', 'ดึก', 'กะดึก', 'กลางคืน', 'คืน'].includes(v)) {
+      return 'night';
+    }
+
+    if (v.includes('day') || v.includes('เช้า') || v.includes('กลางวัน')) {
+      return 'day';
+    }
+    if (v.includes('night') || v.includes('ดึก') || v.includes('คืน') || v.includes('กลางคืน')) {
+      return 'night';
+    }
+    return '';
+  }
+
+  function getEmployeeMasterEmployeeList() {
+    const master = getEmployeeMaster();
+    const headers = master.headers || [];
+    const rows = master.rows || [];
+    if (!headers.length || !rows.length) return [];
+
+    const idIdx = findColumnIndex(headers, ['I.D.', 'ID', 'EMPID', 'EMPLOYEEID', 'รหัสพนักงาน']);
+    const fullNameIdx = findColumnIndex(headers, [
+      'Name_Surname',
+      'Name Surname',
+      'ชื่อ-นามสกุล',
+      'ชื่อสกุล',
+      'Full Name',
+    ]);
+    const nameIdx = findColumnIndex(headers, ['Name', 'ชื่อ']);
+    const surnameIdx = findColumnIndex(headers, ['Surname', 'นามสกุล', 'LastName', 'Last Name']);
+    const shiftIdx = findColumnIndex(headers, [
+      'Group for HFM',
+      'GroupforHFM',
+      'Shift',
+      'กะ',
+      'กะงาน',
+    ]);
+
+    const list = [];
+    rows.forEach((row) => {
+      const rowArr = Array.isArray(row) ? row : [];
+      const rowObj = {};
+      headers.forEach((h, idx) => {
+        rowObj[h] = rowArr[idx] ?? '';
+      });
+
+      const fullName = fullNameIdx >= 0 ? String(rowArr[fullNameIdx] || '').trim() : '';
+      const first = nameIdx >= 0 ? String(rowArr[nameIdx] || '').trim() : '';
+      const last = surnameIdx >= 0 ? String(rowArr[surnameIdx] || '').trim() : '';
+      const employeeName = fullName || `${first} ${last}`.trim() || first || last;
+      if (!employeeName) return;
+
+      list.push({
+        employeeName,
+        employeeId: idIdx >= 0 ? String(rowArr[idIdx] || '').trim() : '',
+        shift: shiftIdx >= 0 ? normalizeShift(rowArr[shiftIdx]) : '',
+        masterData: rowObj,
+      });
+    });
+
+    return list;
   }
 
   // ===== DASHBOARD SUMMARIES =====
@@ -287,6 +456,8 @@ const DataManager = (() => {
       exportedAt: new Date().toISOString(),
       lines: cache.lines,
       leaveRecords: cache.leaveRecords,
+      personalLeaveBookings: cache.personalLeaveBookings,
+      employeeMaster: cache.employeeMaster,
       settings: cache.settings,
     };
   }
@@ -294,6 +465,12 @@ const DataManager = (() => {
   function importAllData(data) {
     if (data.lines) cache.lines = data.lines;
     if (data.leaveRecords) cache.leaveRecords = data.leaveRecords;
+    if (data.personalLeaveBookings) {
+      cache.personalLeaveBookings = data.personalLeaveBookings;
+    }
+    if (data.employeeMaster) {
+      cache.employeeMaster = data.employeeMaster;
+    }
     if (data.settings) cache.settings = { ...cache.settings, ...data.settings };
     saveToFile();
   }
@@ -302,6 +479,8 @@ const DataManager = (() => {
     cache = {
       lines: {},
       leaveRecords: [],
+      personalLeaveBookings: [],
+      employeeMaster: { headers: [], rows: [] },
       settings: { language: cache.settings.language || 'th', currentShift: 'day' },
     };
     saveToFile();
@@ -335,6 +514,12 @@ const DataManager = (() => {
       }
       if (cache.leaveRecords.length === 0) {
         cache.leaveRecords = oldRecords;
+      }
+      if (!Array.isArray(cache.personalLeaveBookings)) {
+        cache.personalLeaveBookings = [];
+      }
+      if (!cache.employeeMaster) {
+        cache.employeeMaster = { headers: [], rows: [] };
       }
       cache.settings = { ...cache.settings, ...oldSettings };
 
@@ -374,6 +559,17 @@ const DataManager = (() => {
     getLeaveRecordsByLine,
     getLeaveRecordsByDateAndLine,
     getLeaveRecordsByDateRange,
+    // Personal Leave Bookings
+    getPersonalLeaveBookings,
+    getPersonalLeaveBookingsByDate,
+    getPersonalLeaveBookingsByDateLineShift,
+    getPersonalLeaveBookingCountByDate,
+    addPersonalLeaveBooking,
+    removePersonalLeaveBooking,
+    // Employee Master
+    getEmployeeMaster,
+    setEmployeeMaster,
+    getEmployeeMasterEmployeeList,
     // Summaries
     getDailySummary,
     getWeeklySummary,

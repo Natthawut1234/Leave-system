@@ -8,12 +8,14 @@ const LeaderModule = (() => {
   let currentShift = 'day';
   let currentDate = new Date().toISOString().split('T')[0];
   let availableEmployees = [];
+  let selectedEmployee = null;
 
   function render() {
     const settings = DataManager.getSettings();
     currentLineId = settings.currentLineId;
     currentShift = settings.currentShift || 'day';
     const t = I18n.t;
+    const useMaster = DataManager.getEmployeeMasterEmployeeList().length > 0;
 
     const container = document.getElementById('main-content');
     container.innerHTML = `
@@ -135,6 +137,11 @@ const LeaderModule = (() => {
                   <span class="badge bg-white text-info" id="emp-count">0</span>
                 </div>
                 <div class="card-body">
+                  ${useMaster ? `
+                  <div class="alert alert-info py-2 small">
+                    <i class="bi bi-database me-1"></i> ${t('employeeMasterInUse')}
+                  </div>
+                  ` : `
                   <!-- Upload Excel -->
                   <div class="mb-3">
                     <label class="form-label text-muted small">${t('uploadExcelHint')}</label>
@@ -153,12 +160,14 @@ const LeaderModule = (() => {
                       <i class="bi bi-person-plus"></i> ${t('addManually')}
                     </button>
                   </div>
+                  `}
                   <!-- Search/filter employee list -->
                   <div class="input-group mb-2">
                     <span class="input-group-text"><i class="bi bi-funnel"></i></span>
                     <input type="text" id="employee-list-filter" class="form-control form-control-sm" 
                            placeholder="${t('filterEmployee')}">
                   </div>
+                  ${useMaster ? '' : `
                   <!-- Select all & Delete selected -->
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="form-check">
@@ -169,6 +178,7 @@ const LeaderModule = (() => {
                       <i class="bi bi-trash"></i> ${t('deleteSelected')} (<span id="selected-count">0</span>)
                     </button>
                   </div>
+                  `}
                   <!-- Employee list -->
                   <div id="employee-list" class="list-group" style="max-height: 400px; overflow-y: auto;">
                   </div>
@@ -178,6 +188,14 @@ const LeaderModule = (() => {
 
             <!-- Right: Today's Leave Records -->
             <div class="col-lg-7">
+              <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                  <h5 class="mb-0"><i class="bi bi-calendar2-check"></i> ${t('bookedPersonalLeaveList')}</h5>
+                  <span class="badge bg-dark" id="booking-preview-count">0</span>
+                </div>
+                <div class="card-body" id="booking-preview-body"></div>
+              </div>
+
               <div class="card shadow-sm border-0">
                 <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                   <h5 class="mb-0"><i class="bi bi-list-check"></i> ${t('todayLeaves')}</h5>
@@ -365,22 +383,22 @@ const LeaderModule = (() => {
     // Add employee manually
     document
       .getElementById('btn-add-employee')
-      .addEventListener('click', addEmployeeManually);
+      ?.addEventListener('click', addEmployeeManually);
     document
       .getElementById('new-employee-name')
-      .addEventListener('keypress', (e) => {
+      ?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addEmployeeManually();
       });
 
     // Excel upload
     document
       .getElementById('excel-upload')
-      .addEventListener('change', handleExcelUpload);
+      ?.addEventListener('change', handleExcelUpload);
 
     // Download template
     document
       .getElementById('btn-download-template')
-      .addEventListener('click', downloadTemplate);
+      ?.addEventListener('click', downloadTemplate);
 
     // Search history
     document
@@ -427,16 +445,20 @@ const LeaderModule = (() => {
 
     empSearchInput.addEventListener('input', () => {
       empHiddenInput.value = '';
+      selectedEmployee = null;
       renderEmployeeDropdown(empSearchInput.value);
       empDropdown.style.display = 'block';
     });
 
     empDropdown.addEventListener('click', (e) => {
-      const item = e.target.closest('.dropdown-item[data-value]');
+      const item = e.target.closest('.dropdown-item[data-index]');
       if (item) {
-        const name = item.getAttribute('data-value').replace(/\\'/g, "'");
-        empSearchInput.value = name;
-        empHiddenInput.value = name;
+        const index = Number(item.getAttribute('data-index'));
+        const emp = availableEmployees[index];
+        if (!emp) return;
+        empSearchInput.value = emp.employeeName;
+        empHiddenInput.value = emp.employeeName;
+        selectedEmployee = emp;
         empDropdown.style.display = 'none';
       }
     });
@@ -463,7 +485,7 @@ const LeaderModule = (() => {
     });
 
     // Select all checkbox
-    document.getElementById('select-all-emp').addEventListener('change', (e) => {
+    document.getElementById('select-all-emp')?.addEventListener('change', (e) => {
       const checked = e.target.checked;
       document.querySelectorAll('#employee-list .emp-checkbox').forEach((cb) => {
         // Only check visible items
@@ -482,14 +504,53 @@ const LeaderModule = (() => {
     });
 
     // Delete selected button
-    document.getElementById('btn-delete-selected').addEventListener('click', removeSelectedEmployees);
+    document.getElementById('btn-delete-selected')?.addEventListener('click', removeSelectedEmployees);
   }
 
   function refreshData() {
     refreshEmployeeList();
     refreshEmployeeSelect();
+    refreshBookingPreview();
     refreshLeaveTable();
     refreshStats();
+  }
+
+  function refreshBookingPreview() {
+    if (!currentLineId) return;
+    const container = document.getElementById('booking-preview-body');
+    const countEl = document.getElementById('booking-preview-count');
+    if (!container || !countEl) return;
+
+    const bookings = DataManager.getPersonalLeaveBookingsByDateLineShift(
+      currentDate,
+      currentLineId,
+      currentShift
+    );
+    const t = I18n.t;
+    countEl.textContent = bookings.length;
+
+    if (bookings.length === 0) {
+      container.innerHTML = `<p class="text-muted mb-0">${t('noPersonalLeaveBooking')}</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="list-group list-group-flush">
+        ${bookings
+          .map(
+            (b, idx) => `
+          <div class="list-group-item px-0 d-flex justify-content-between align-items-start">
+            <div>
+              <strong>${idx + 1}. ${b.employeeName}</strong>
+              ${b.note ? `<div class="small text-muted">${b.note}</div>` : ''}
+            </div>
+            <span class="badge bg-warning text-dark">${t('leaveTypePersonal')}</span>
+          </div>
+        `
+          )
+          .join('')}
+      </div>
+    `;
   }
 
   function refreshStats() {
@@ -539,6 +600,7 @@ const LeaderModule = (() => {
   function refreshEmployeeList() {
     if (!currentLineId) return;
     const employees = DataManager.getEmployees(currentLineId, currentShift);
+    const useMaster = DataManager.getEmployeeMasterEmployeeList().length > 0;
     const container = document.getElementById('employee-list');
     const t = I18n.t;
 
@@ -557,12 +619,10 @@ const LeaderModule = (() => {
         (emp, idx) => `
       <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2">
         <div class="d-flex align-items-center gap-2">
-          <input class="form-check-input emp-checkbox" type="checkbox" value="${escapeHtml(emp)}">
+          ${useMaster ? '' : `<input class="form-check-input emp-checkbox" type="checkbox" value="${escapeHtml(emp)}">`}
           <span><small class="text-muted">${idx + 1}.</small> ${emp}</span>
         </div>
-        <button class="btn btn-outline-danger btn-sm" onclick="LeaderModule.removeEmp('${escapeHtml(emp)}')">
-          <i class="bi bi-x"></i>
-        </button>
+        ${useMaster ? '' : `<button class="btn btn-outline-danger btn-sm" onclick="LeaderModule.removeEmp('${escapeHtml(emp)}')"><i class="bi bi-x"></i></button>`}
       </div>
     `
       )
@@ -579,19 +639,34 @@ const LeaderModule = (() => {
 
   function refreshEmployeeSelect() {
     if (!currentLineId) return;
-    const employees = DataManager.getEmployees(currentLineId, currentShift);
+    const masterEmployees = DataManager.getEmployeeMasterEmployeeList();
+    const hasMaster = masterEmployees.length > 0;
+    const employees = hasMaster
+      ? masterEmployees.filter((emp) => !emp.shift || emp.shift === currentShift)
+      : DataManager.getEmployees(currentLineId, currentShift).map((name) => ({
+          employeeName: name,
+          employeeId: '',
+          masterData: null,
+        }));
     const leaves = DataManager.getLeaveRecordsByDateAndLine(
       currentDate,
       currentLineId,
       currentShift
     );
-    const onLeaveNames = leaves.map((l) => l.employeeName);
-    availableEmployees = employees.filter((emp) => !onLeaveNames.includes(emp));
+    const onLeaveKeys = new Set(
+      leaves.map((l) => String(l.employeeId || l.employeeName || '').trim())
+    );
+    availableEmployees = employees.filter((emp) => {
+      const key = String(emp.employeeId || emp.employeeName || '').trim();
+      return key && !onLeaveKeys.has(key);
+    });
+
     // Clear the search input
     const searchInput = document.getElementById('employee-search-input');
     const hiddenInput = document.getElementById('employee-select-value');
     if (searchInput) searchInput.value = '';
     if (hiddenInput) hiddenInput.value = '';
+    selectedEmployee = null;
     renderEmployeeDropdown('');
   }
 
@@ -601,7 +676,7 @@ const LeaderModule = (() => {
     const t = I18n.t;
     const keyword = filter.trim().toLowerCase();
     const filtered = keyword
-      ? availableEmployees.filter((emp) => emp.toLowerCase().includes(keyword))
+      ? availableEmployees.filter((emp) => emp.employeeName.toLowerCase().includes(keyword))
       : availableEmployees;
 
     if (filtered.length === 0) {
@@ -609,8 +684,10 @@ const LeaderModule = (() => {
     } else {
       dropdown.innerHTML = filtered
         .map(
-          (emp) =>
-            `<div class="dropdown-item" data-value="${escapeHtml(emp)}">${highlightMatch(emp, keyword)}</div>`
+          (emp) => {
+            const actualIndex = availableEmployees.indexOf(emp);
+            return `<div class="dropdown-item" data-index="${actualIndex}">${highlightMatch(emp.employeeName, keyword)}</div>`;
+          }
         )
         .join('');
     }
@@ -690,7 +767,7 @@ const LeaderModule = (() => {
     const recordDate = document.getElementById('record-leave-date').value || currentDate;
     const note = document.getElementById('leave-note').value.trim();
 
-    if (!employeeName) {
+    if (!employeeName || !selectedEmployee) {
       showToast(I18n.t('employeeName'), 'warning');
       return;
     }
@@ -699,7 +776,9 @@ const LeaderModule = (() => {
       date: recordDate,
       lineId: currentLineId,
       shift: currentShift,
-      employeeName,
+      employeeId: selectedEmployee.employeeId || '',
+      employeeName: selectedEmployee.employeeName,
+      employeeMasterData: selectedEmployee.masterData || null,
       leaveType,
       note,
     });
@@ -719,6 +798,10 @@ const LeaderModule = (() => {
   }
 
   function addEmployeeManually() {
+    if (DataManager.getEmployeeMasterEmployeeList().length > 0) {
+      showToast(I18n.t('employeeMasterInUse'), 'warning');
+      return;
+    }
     const input = document.getElementById('new-employee-name');
     const name = input.value.trim();
     if (!name || !currentLineId) return;
@@ -743,6 +826,10 @@ const LeaderModule = (() => {
   }
 
   function removeSelectedEmployees() {
+    if (DataManager.getEmployeeMasterEmployeeList().length > 0) {
+      showToast(I18n.t('employeeMasterInUse'), 'warning');
+      return;
+    }
     const checked = document.querySelectorAll('#employee-list .emp-checkbox:checked');
     if (checked.length === 0) return;
     const names = Array.from(checked).map((cb) => cb.value.replace(/\\'/g, "'"));
@@ -754,6 +841,10 @@ const LeaderModule = (() => {
   }
 
   function removeEmp(name) {
+    if (DataManager.getEmployeeMasterEmployeeList().length > 0) {
+      showToast(I18n.t('employeeMasterInUse'), 'warning');
+      return;
+    }
     if (confirm(I18n.t('confirmDelete'))) {
       DataManager.removeEmployee(currentLineId, currentShift, name);
       refreshEmployeeList();
@@ -772,6 +863,10 @@ const LeaderModule = (() => {
   }
 
   function handleExcelUpload(e) {
+    if (DataManager.getEmployeeMasterEmployeeList().length > 0) {
+      showToast(I18n.t('employeeMasterInUse'), 'warning');
+      return;
+    }
     const file = e.target.files[0];
     if (!file || !currentLineId) return;
 

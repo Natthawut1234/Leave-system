@@ -12,14 +12,25 @@ const I18n = (() => {
       // Navigation
       navHome: 'หน้าหลัก',
       navLeader: 'Leader - บันทึกการลา',
+      navBooking: 'จองลากิจ',
       navDashboard: 'Dashboard - สรุปภาพรวม',
       navSettings: 'ตั้งค่า',
 
       // Roles
       roleLeader: 'Leader ไลน์ผลิต',
       roleLeaderDesc: 'บันทึกการลาของพนักงานประจำวัน',
+      roleBooking: 'จองลากิจล่วงหน้า',
+      roleBookingDesc: 'จองลากิจล่วงหน้าได้สูงสุด 5 คนต่อวัน',
       roleManager: 'Production Manager',
       roleManagerDesc: 'ดู Dashboard ภาพรวมทุกไลน์',
+
+      // Personal Leave Booking Page
+      bookPersonalLeave: 'จองลากิจ',
+      personalLeaveBookingHint: 'จองลากิจล่วงหน้าได้สูงสุด 5 คนต่อวัน เมื่อถึงวันจริงให้ไปบันทึกการลาในหน้า Leader',
+      bookedPersonalLeaveList: 'รายการจองลากิจ',
+      noPersonalLeaveBooking: 'ยังไม่มีการจองลากิจในวันนี้',
+      bookingLimitReached: 'จองลากิจครบ 5 คนแล้วสำหรับวันนี้',
+      bookingAlreadyExists: 'พนักงานคนนี้จองลากิจในวันนี้แล้ว',
 
       // Shifts
       selectShift: 'เลือกกะ',
@@ -104,6 +115,13 @@ const I18n = (() => {
       exportDataHint: 'สำรองข้อมูลทั้งหมดเป็นไฟล์ JSON (เผื่อกรณีฉุกเฉิน)',
       importDataHint: 'นำเข้าข้อมูลจากไฟล์สำรอง JSON (ข้อมูลเดิมจะถูกแทนที่)',
       clearDataHint: 'ลบข้อมูลทั้งหมดในระบบ (ไม่สามารถกู้คืนได้)',
+      employeeMasterData: 'ฐานข้อมูลพนักงาน',
+      uploadEmployeeMaster: 'อัปโหลดฐานข้อมูล',
+      uploadEmployeeMasterHint: 'อัปโหลดไฟล์รายชื่อพนักงานต้นฉบับ (xlsx/xls) ระบบจะเก็บโครงสร้างตารางเดิมไว้ในไฟล์หลัก',
+      employeeMasterRows: 'จำนวนรายการพนักงาน',
+      employeeMasterUploaded: 'อัปโหลดฐานข้อมูลพนักงานสำเร็จ',
+      employeeMasterInvalid: 'ไฟล์ฐานข้อมูลพนักงานไม่ถูกต้อง',
+      employeeMasterInUse: 'ระบบใช้รายชื่อจาก EmployeeMaster แล้ว รายชื่อในไลน์ไม่ถูกใช้งาน',
 
       // Connection / File
       connectedExcelFile: 'ไฟล์ Excel ที่เชื่อมต่อ',
@@ -177,14 +195,25 @@ const I18n = (() => {
       // Navigation
       navHome: 'Home',
       navLeader: 'Leader - Record Leave',
+      navBooking: 'Personal Leave Booking',
       navDashboard: 'Dashboard - Overview',
       navSettings: 'Settings',
 
       // Roles
       roleLeader: 'Line Leader',
       roleLeaderDesc: 'Record daily leave for team members',
+      roleBooking: 'Book Personal Leave',
+      roleBookingDesc: 'Reserve personal leave up to 5 people per day',
       roleManager: 'Production Manager',
       roleManagerDesc: 'View Dashboard overview of all lines',
+
+      // Personal Leave Booking Page
+      bookPersonalLeave: 'Book Personal Leave',
+      personalLeaveBookingHint: 'Reserve personal leave up to 5 people per day. On the actual day, record leave in the Leader page as usual.',
+      bookedPersonalLeaveList: 'Personal Leave Bookings',
+      noPersonalLeaveBooking: 'No personal leave bookings for this date',
+      bookingLimitReached: 'Daily personal leave booking limit (5) has been reached',
+      bookingAlreadyExists: 'This employee already has a booking for this date',
 
       // Shifts
       selectShift: 'Select Shift',
@@ -270,6 +299,13 @@ const I18n = (() => {
       exportDataHint: 'Backup all data as a JSON file (for emergencies)',
       importDataHint: 'Import data from a JSON backup file (old data will be replaced)',
       clearDataHint: 'Delete all data in the system (cannot be recovered)',
+      employeeMasterData: 'Employee Master Data',
+      uploadEmployeeMaster: 'Upload Master Data',
+      uploadEmployeeMasterHint: 'Upload the original employee master file (xlsx/xls). The system will preserve this table structure in the main file.',
+      employeeMasterRows: 'Employee Rows',
+      employeeMasterUploaded: 'Employee master data uploaded successfully',
+      employeeMasterInvalid: 'Invalid employee master file',
+      employeeMasterInUse: 'Employee list is now sourced from EmployeeMaster. Line employee list is no longer used.',
 
       // Connection / File
       connectedExcelFile: 'Connected Excel File',

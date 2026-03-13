@@ -173,6 +173,8 @@ const ExcelStorage = (() => {
     const data = {
       lines: {},
       leaveRecords: [],
+      personalLeaveBookings: [],
+      employeeMaster: { headers: [], rows: [] },
       settings: { language: 'th' },
     };
 
@@ -221,11 +223,52 @@ const ExcelStorage = (() => {
         date: row['Date'] || row['date'] || '',
         lineId: String(row['LineID'] || row['lineId'] || ''),
         shift: row['Shift'] || row['shift'] || 'day',
+        employeeId: row['EmployeeID'] || row['employeeId'] || '',
         employeeName: row['EmployeeName'] || row['employeeName'] || '',
         leaveType: row['LeaveType'] || row['leaveType'] || '',
         note: row['Note'] || row['note'] || '',
+        employeeMasterData: (() => {
+          const raw = row['EmployeeMasterData'] || row['employeeMasterData'] || '';
+          if (!raw) return null;
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return null;
+          }
+        })(),
         createdAt: row['CreatedAt'] || row['createdAt'] || '',
       }));
+    }
+
+    // Read PersonalBookings sheet
+    if (wb.SheetNames.includes('PersonalBookings')) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets['PersonalBookings']);
+      data.personalLeaveBookings = rows.map((row) => ({
+        id: row['BookingID'] || row['id'] || '',
+        date: row['Date'] || row['date'] || '',
+        lineId: String(row['LineID'] || row['lineId'] || ''),
+        shift: row['Shift'] || row['shift'] || 'day',
+        employeeName: row['EmployeeName'] || row['employeeName'] || '',
+        note: row['Note'] || row['note'] || '',
+        leaveType: row['LeaveType'] || row['leaveType'] || 'ลากิจ',
+        createdAt: row['CreatedAt'] || row['createdAt'] || '',
+      }));
+    }
+
+    // Read EmployeeMaster sheet (keep original table structure)
+    if (wb.SheetNames.includes('EmployeeMaster')) {
+      const matrix = XLSX.utils.sheet_to_json(wb.Sheets['EmployeeMaster'], {
+        header: 1,
+        defval: '',
+      });
+      if (matrix.length > 0) {
+        data.employeeMaster = {
+          headers: (matrix[0] || []).map((h) => String(h || '').trim()),
+          rows: matrix.slice(1).filter((row) =>
+            row.some((cell) => String(cell || '').trim() !== '')
+          ),
+        };
+      }
     }
 
     // Read Settings sheet
@@ -279,13 +322,43 @@ const ExcelStorage = (() => {
       Date: r.date,
       LineID: r.lineId,
       Shift: r.shift || 'day',
+      EmployeeID: r.employeeId || '',
       EmployeeName: r.employeeName,
       LeaveType: r.leaveType,
       Note: r.note || '',
+      EmployeeMasterData: r.employeeMasterData
+        ? JSON.stringify(r.employeeMasterData)
+        : '',
       CreatedAt: r.createdAt || '',
     }));
     const recordsWS = XLSX.utils.json_to_sheet(recordsRows);
     recordsWS['!cols'] = [
+      { wch: 25 },
+      { wch: 12 },
+      { wch: 8 },
+      { wch: 8 },
+      { wch: 14 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 30 },
+      { wch: 60 },
+      { wch: 25 },
+    ];
+    XLSX.utils.book_append_sheet(wb, recordsWS, 'LeaveRecords');
+
+    // PersonalBookings sheet
+    const bookingsRows = (data.personalLeaveBookings || []).map((b) => ({
+      BookingID: b.id,
+      Date: b.date,
+      LineID: b.lineId,
+      Shift: b.shift || 'day',
+      EmployeeName: b.employeeName,
+      LeaveType: b.leaveType || 'ลากิจ',
+      Note: b.note || '',
+      CreatedAt: b.createdAt || '',
+    }));
+    const bookingsWS = XLSX.utils.json_to_sheet(bookingsRows);
+    bookingsWS['!cols'] = [
       { wch: 25 },
       { wch: 12 },
       { wch: 8 },
@@ -295,7 +368,20 @@ const ExcelStorage = (() => {
       { wch: 30 },
       { wch: 25 },
     ];
-    XLSX.utils.book_append_sheet(wb, recordsWS, 'LeaveRecords');
+    XLSX.utils.book_append_sheet(wb, bookingsWS, 'PersonalBookings');
+
+    // EmployeeMaster sheet (preserve uploaded HR-like table)
+    const masterHeaders = Array.isArray(data.employeeMaster?.headers)
+      ? data.employeeMaster.headers
+      : [];
+    const masterRows = Array.isArray(data.employeeMaster?.rows)
+      ? data.employeeMaster.rows
+      : [];
+    if (masterHeaders.length > 0 || masterRows.length > 0) {
+      const masterMatrix = [masterHeaders, ...masterRows];
+      const masterWS = XLSX.utils.aoa_to_sheet(masterMatrix);
+      XLSX.utils.book_append_sheet(wb, masterWS, 'EmployeeMaster');
+    }
 
     // Settings sheet
     const settingsRows = Object.entries(data.settings || {}).map(
@@ -329,6 +415,8 @@ const ExcelStorage = (() => {
     return {
       lines,
       leaveRecords: [],
+      personalLeaveBookings: [],
+      employeeMaster: { headers: [], rows: [] },
       settings: { language: 'th', currentShift: 'day' },
     };
   }
