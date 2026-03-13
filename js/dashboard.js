@@ -385,9 +385,9 @@ const DashboardModule = (() => {
       'ลากิจ': '#ffc107',
       'ลาพักร้อน': '#0dcaf0',
       'ลาคลอด': '#0d6efd',
-      'อื่นๆ': '#6c757d',
       'มาสาย': '#fd7e14',
       'ขาด': '#212529',
+      'อื่นๆ': '#6c757d',
     };
 
     const translatedLabels = labels.map((l) => I18n.translateLeaveType(l));

@@ -109,10 +109,14 @@ const LeaderModule = (() => {
                       <option value="ลากิจ">${t('leaveTypePersonal')}</option>
                       <option value="ลาพักร้อน">${t('leaveTypeVacation')}</option>
                       <option value="ลาคลอด">${t('leaveTypeMaternity')}</option>
-                      <option value="อื่นๆ">${t('leaveTypeOther')}</option>
                       <option value="มาสาย">${t('leaveTypeLate')}</option>
                       <option value="ขาด">${t('leaveTypeAbsent')}</option>
+                      <option value="อื่นๆ">${t('leaveTypeOther')}</option>
                     </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">${t('leaveDate')}</label>
+                    <input type="date" id="record-leave-date" class="form-control" value="${currentDate}">
                   </div>
                   <div class="mb-3">
                     <label class="form-label">${t('note')}</label>
@@ -683,6 +687,7 @@ const LeaderModule = (() => {
   function recordLeave() {
     const employeeName = document.getElementById('employee-select-value').value;
     const leaveType = document.getElementById('leave-type').value;
+    const recordDate = document.getElementById('record-leave-date').value || currentDate;
     const note = document.getElementById('leave-note').value.trim();
 
     if (!employeeName) {
@@ -691,7 +696,7 @@ const LeaderModule = (() => {
     }
 
     DataManager.addLeaveRecord({
-      date: currentDate,
+      date: recordDate,
       lineId: currentLineId,
       shift: currentShift,
       employeeName,
@@ -700,6 +705,13 @@ const LeaderModule = (() => {
     });
 
     document.getElementById('leave-note').value = '';
+
+    // Switch table view to recorded date if different
+    if (recordDate !== currentDate) {
+      currentDate = recordDate;
+      document.getElementById('leave-date').value = currentDate;
+    }
+
     refreshEmployeeSelect();
     refreshLeaveTable();
     refreshStats();

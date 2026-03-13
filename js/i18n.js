@@ -37,6 +37,7 @@ const I18n = (() => {
       employeeName: 'ชื่อพนักงาน',
       leaveType: 'ประเภทการลา',
       note: 'หมายเหตุ',
+      leaveDate: 'วันที่ลา',
       recordLeave: 'บันทึกการลา',
       todayLeaves: 'คนลาวันนี้',
       noEmployees: 'ยังไม่มีรายชื่อพนักงาน กรุณาเพิ่มหรืออัพโหลดจาก Excel',
@@ -61,9 +62,9 @@ const I18n = (() => {
       leaveTypePersonal: 'ลากิจ',
       leaveTypeVacation: 'ลาพักร้อน',
       leaveTypeMaternity: 'ลาคลอด',
-      leaveTypeOther: 'อื่นๆ',
       leaveTypeLate: 'มาสาย',
       leaveTypeAbsent: 'ขาด',
+      leaveTypeOther: 'อื่นๆ',
 
       // Dashboard
       dashboardTitle: 'Dashboard - สรุปภาพรวม',
@@ -201,6 +202,7 @@ const I18n = (() => {
       employeeName: 'Employee Name',
       leaveType: 'Leave Type',
       note: 'Note',
+      leaveDate: 'Leave Date',
       recordLeave: 'Record Leave',
       todayLeaves: "Today's Leaves",
       noEmployees: 'No employees yet. Please add or upload from Excel.',
@@ -356,9 +358,9 @@ const I18n = (() => {
     'ลากิจ': 'leaveTypePersonal',
     'ลาพักร้อน': 'leaveTypeVacation',
     'ลาคลอด': 'leaveTypeMaternity',
-    'อื่นๆ': 'leaveTypeOther',
     'มาสาย': 'leaveTypeLate',
     'ขาด': 'leaveTypeAbsent',
+    'อื่นๆ': 'leaveTypeOther',
   };
 
   function translateLeaveType(thaiType) {
